@@ -16,9 +16,15 @@ class ButtonBindings:
         """Configure button bindings for the robot."""
 
         # Driver Controls
-        povUpDriverButton = self.driverController.pov(0)
-        povUpDriverButton.onTrue(ResetXY(x=0.0, y=0.0, headingDegrees=0.0, drivetrain=self.robotDrive))
-        povUpDriverButton.whileTrue(RunCommand(self.robotDrive.setX, self.robotDrive))
+        # Reset XY Position
+#        povUpDriverButton = self.driverController.pov(0)
+#        povUpDriverButton.onTrue(ResetXY(x=0.0, y=0.0, headingDegrees=0.0, drivetrain=self.robotDrive))
+#        povUpDriverButton.whileTrue(RunCommand(self.robotDrive.setX, self.robotDrive))
 
-        povDownDriverButton = self.driverController.pov(180)
-        povDownDriverButton.onTrue(ResetSwerveFront(self.robotDrive))
+        # Reset Swerve Front
+#        povDownDriverButton = self.driverController.pov(180)
+#        povDownDriverButton.onTrue(ResetSwerveFront(self.robotDrive))
+        
+        # X-Break
+#        povLeftDriverButton = self.driverController.pov(270)
+#        povLeftDriverButton.whileTrue(InstantCommand(self.robotDrive.setX, self.robotDrive))

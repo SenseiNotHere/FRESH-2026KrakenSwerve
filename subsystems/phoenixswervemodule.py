@@ -33,18 +33,18 @@ class PhoenixSwerveModule:
         drivingConfig = TalonFXConfiguration()
         drivingConfig.motor_output.neutral_mode = NeutralModeValue.BRAKE
         # Set appropriate PID values for velocity control
-        drivingConfig.slot0.kP = 0.1
-        drivingConfig.slot0.kI = 0.0
-        drivingConfig.slot0.kD = 0.0
+        drivingConfig.slot0.k_p = 0.3
+        drivingConfig.slot0.k_i = 0.0
+        drivingConfig.slot0.k_d = 0.0
         self.drivingMotor.configurator.apply(drivingConfig)
 
         #Initialize Turning Motors
         turningConfig = TalonFXConfiguration()
         turningConfig.motor_output.neutral_mode = NeutralModeValue.BRAKE
         #Set appropriate PID values for position control
-        turningConfig.slot0.kP = 50.0
-        turningConfig.slot0.kI = 0.0
-        turningConfig.slot0.kD = 0.1
+        turningConfig.slot0.k_p = 8.0
+        turningConfig.slot0.k_i = 0.0
+        turningConfig.slot0.k_d = 0.05
         #Use InvertedValue enum instead of bool
         turningConfig.motor_output.inverted = InvertedValue.CLOCKWISE_POSITIVE if turnMotorInverted else InvertedValue.COUNTER_CLOCKWISE_POSITIVE
         self.turningMotor.configurator.apply(turningConfig)
@@ -103,19 +103,23 @@ class PhoenixSwerveModule:
             angle_diff += 2 * math.pi
 
         # If the difference is greater than 90 degrees (π/2), flip the direction
-        if abs(angle_diff) > math.pi / 2:
-            optimized_speed = -correctedDesiredState.speed
-            optimized_angle = Rotation2d(correctedDesiredState.angle.radians() + math.pi)
-        else:
-            optimized_speed = correctedDesiredState.speed
-            optimized_angle = correctedDesiredState.angle
+        #if abs(angle_diff) > math.pi / 2:
+        #    optimized_speed = -correctedDesiredState.speed
+        #    optimized_angle = Rotation2d(correctedDesiredState.angle.radians() + math.pi)
+        #else:
+        #    optimized_speed = correctedDesiredState.speed
+        #    optimized_angle = correctedDesiredState.angle
+        optimized_speed = correctedDesiredState.speed
+        optimized_angle = correctedDesiredState.angle
 
         # Convert optimized angle to rotations
         angle_in_rotations = optimized_angle.radians() / (2 * math.pi)
 
         #Send commands to motors
-        self.drivingMotor.set_control(self.velocity_request.with_velocity(optimized_speed))
-        self.turningMotor.set_control(self.position_request.with_position(angle_in_rotations))
+        self.drivingMotor.set_control(self.velocity_request.with_velocity(optimized_speed * ModuleConstants.kDrivingMotorReduction / ModuleConstants.kWheelCircumferenceMeters))
+        #print(f"Speed {optimized_speed} {optimized_speed * ModuleConstants.kDrivingMotorReduction / ModuleConstants.kWheelCircumferenceMeters}")
+        self.turningMotor.set_control(self.position_request.with_position(angle_in_rotations * ModuleConstants.kTurningMotorReduction))
+        #print(f"Target angle:{angle_in_rotations} {desiredState.angle} {Rotation2d(self.chassisAngularOffset)}")
 
         self.desiredState = desiredState
 

@@ -11,20 +11,20 @@ from phoenix6.signals import NeutralModeValue
 from pathplannerlib.config import RobotConfig, ModuleConfig, DCMotor
 
 class KrakenX60:
-    kFreeSpeedRpm = 6000
+    kFreeSpeedRpm = 5800
 
 class DrivingConstants:
     #Driving Motors
-    kFrontLeftDriving = 1
-    kFrontRightDriving = 2
-    kBackLeftDriving = 3
-    kBackRightDriving = 4
+    kFrontLeftDriving = 7
+    kFrontRightDriving = 5
+    kBackLeftDriving = 2
+    kBackRightDriving = 3
 
     #Turning Motors
-    kFrontLeftTurning = 5
+    kFrontLeftTurning = 8
     kFrontRightTurning = 6
-    kBackLeftTurning = 7
-    kBackRightTurning = 8
+    kBackLeftTurning = 1
+    kBackRightTurning = 4
 
     #Other settings
     #These are the maximum speeds the robot can reach, not maximum speeds allowed.
@@ -50,7 +50,7 @@ class DrivingConstants:
     ]
     kDriveKinematics = SwerveDrive4Kinematics(*kModulePositions)
 
-    kAssumeZeroOffsets = False
+    kAssumeZeroOffsets = True
 
     # set the above to == False, if you are manually zeroing (and you have to tinker with offsets below)
     kFrontLeftChassisAngularOffset = units.degreesToRadians(180)
@@ -62,22 +62,20 @@ class DrivingConstants:
 
 class ModuleConstants:
     #One needs to be false and the other true! Which is false and which is true depends on which swerve type you have.
-    kTurningEncoderInverted = True
+    kTurningEncoderInverted = False # not used
     kTurningMotorInverted = False
 
     kDrivingMotorPinionTeeth = 14
 
     # Calculations required for driving motor conversion factors and feed forward
     kDrivingMotorFreeSpeedRps = KrakenX60.kFreeSpeedRpm / 60
-    kWheelDiameterMeters = 0.0762
+    kWheelDiameterMeters = 0.0965
     kWheelCircumferenceMeters = kWheelDiameterMeters * math.pi
     # 45 teeth on the wheel's bevel gear, 22 teeth on the first-stage spur gear, 15 teeth on the bevel pinion
-    kDrivingMotorReduction = (45.0 * 22) / (kDrivingMotorPinionTeeth * 15)
+    kDrivingMotorReduction = 6.02
     kDriveWheelFreeSpeedRps = (kDrivingMotorFreeSpeedRps * kWheelCircumferenceMeters) / kDrivingMotorReduction
 
-    kDrivingEncoderPositionFactor = (kWheelDiameterMeters * math.pi) / kDrivingMotorReduction  # meters
-    kDrivingEncoderVelocityFactor = ((kWheelDiameterMeters * math.pi) / kDrivingMotorReduction) / 60.0  # meters per second
-
+    kTurningMotorReduction = 287 / 11.
     kTurningEncoderPositionFactor = math.tau  # radian
     kTurningEncoderVelocityFactor = math.tau / 60.0  # radians per second
 
