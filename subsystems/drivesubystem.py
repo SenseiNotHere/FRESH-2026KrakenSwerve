@@ -6,6 +6,7 @@ import typing
 import wpilib
 
 from commands2 import Subsystem
+from magicbot import feedback
 from wpimath.filter import SlewRateLimiter
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.kinematics import (
@@ -42,35 +43,39 @@ class DriveSubsystem(Subsystem):
         enabledChassisAngularOffset = 0 if DrivingConstants.kAssumeZeroOffsets else 1
 
         self.frontLeft = PhoenixSwerveModule(
-            DrivingConstants.kFrontLeftDriving,
-            DrivingConstants.kFrontLeftTurning,
-            DrivingConstants.kFrontRightDriving,
-            DrivingConstants.kFrontLeftChassisAngularOffset * enabledChassisAngularOffset,
-            turnMotorInverted=ModuleConstants.kTurningMotorInverted
+            drivingCANId=DrivingConstants.kFrontLeftDriving,
+            turningCANId=DrivingConstants.kFrontLeftTurning,
+            feedbackDeviceId=DrivingConstants.kFrontLeftCANCoder,
+            feedbackInverted=ModuleConstants.kTurningEncoderInverted,
+            chassisAngularOffset=DrivingConstants.kFrontLeftChassisAngularOffset * enabledChassisAngularOffset,
+            turnMotorInverted=ModuleConstants.kTurningMotorInverted,
         )
 
         self.frontRight = PhoenixSwerveModule(
-            DrivingConstants.kFrontRightDriving,
-            DrivingConstants.kFrontRightTurning,
-            DrivingConstants.kFrontRightCANCoder,
-            DrivingConstants.kFrontRightChassisAngularOffset * enabledChassisAngularOffset,
-            turnMotorInverted=ModuleConstants.kTurningMotorInverted
+            drivingCANId=DrivingConstants.kFrontRightDriving,
+            turningCANId=DrivingConstants.kFrontRightTurning,
+            feedbackDeviceId=DrivingConstants.kFrontRightCANCoder,
+            feedbackInverted=ModuleConstants.kTurningEncoderInverted,
+            chassisAngularOffset=DrivingConstants.kFrontRightChassisAngularOffset * enabledChassisAngularOffset,
+            turnMotorInverted=ModuleConstants.kTurningMotorInverted,
         )
 
         self.backLeft = PhoenixSwerveModule(
-            DrivingConstants.kBackLeftDriving,
-            DrivingConstants.kBackLeftTurning,
-            DrivingConstants.kBackLeftCANCoder,
-            DrivingConstants.kBackLeftChassisAngularOffset * enabledChassisAngularOffset,
-            turnMotorInverted=ModuleConstants.kTurningMotorInverted
+            drivingCANId=DrivingConstants.kBackLeftDriving,
+            turningCANId=DrivingConstants.kBackLeftTurning,
+            feedbackDeviceId=DrivingConstants.kBackLeftCANCoder,
+            feedbackInverted=ModuleConstants.kTurningEncoderInverted,
+            chassisAngularOffset=DrivingConstants.kBackLeftChassisAngularOffset * enabledChassisAngularOffset,
+            turnMotorInverted=ModuleConstants.kTurningMotorInverted,
         )
 
         self.backRight = PhoenixSwerveModule(
-            DrivingConstants.kBackRightDriving,
-            DrivingConstants.kBackRightTurning,
-            DrivingConstants.kBackRightCANCoder,
-            DrivingConstants.kBackRightChassisAngularOffset * enabledChassisAngularOffset,
-            turnMotorInverted=ModuleConstants.kTurningMotorInverted
+            drivingCANId=DrivingConstants.kBackRightDriving,
+            turningCANId=DrivingConstants.kBackRightTurning,
+            feedbackDeviceId=DrivingConstants.kBackRightCANCoder,
+            feedbackInverted=ModuleConstants.kTurningEncoderInverted,
+            chassisAngularOffset=DrivingConstants.kBackRightChassisAngularOffset * enabledChassisAngularOffset,
+            turnMotorInverted=ModuleConstants.kTurningMotorInverted,
         )
 
         #RoboRIO Gyro Sensor
