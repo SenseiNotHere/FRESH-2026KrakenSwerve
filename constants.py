@@ -26,6 +26,12 @@ class DrivingConstants:
     kBackLeftTurning = 1
     kBackRightTurning = 4
 
+    # CANCOders
+    kFrontLeftCANCoder = 1
+    kFrontRightCANCoder = 3
+    kBackLeftCANCoder = 2
+    kBackRightCANCoder = 4
+
     #Other settings
     #These are the maximum speeds the robot can reach, not maximum speeds allowed.
     kMaxMetersPerSecond = 3.0
@@ -62,7 +68,7 @@ class DrivingConstants:
 
 class ModuleConstants:
     #One needs to be false and the other true! Which is false and which is true depends on which swerve type you have.
-    kTurningEncoderInverted = False # not used
+    kTurningEncoderInverted = True
     kTurningMotorInverted = False
 
     kDrivingMotorPinionTeeth = 14

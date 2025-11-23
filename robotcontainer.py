@@ -45,14 +45,14 @@ class RobotContainer:
         self.robotDrive = DriveSubsystem()
         if commands2.TimedCommandRobot.isSimulation():
             self.robotDrive.simPhysics = BadSimPhysics(self.robotDrive, robot)
-#        self.autoChooser = AutoBuilder.buildAutoChooser()
-#        SmartDashboard.putData("Auto Chooser", self.autoChooser)
+        self.autoChooser = AutoBuilder.buildAutoChooser()
+        SmartDashboard.putData("Auto Chooser", self.autoChooser)
 
         #Setting up controllers
         self.driverController = CommandGenericHID(OIConstants.kDriverControllerPort)
 
-#        self.buttonBindings = ButtonBindings(self)
-#        self.buttonBindings.configureButtonBindings()
+        self.buttonBindings = ButtonBindings(self)
+        self.buttonBindings.configureButtonBindings()
 
         self.robotDrive.setDefaultCommand(
             HolonomicDrive(
@@ -66,6 +66,8 @@ class RobotContainer:
                 square=True,
             )
         )
+
+        # Data Puts
 
     def disablePIDSubsystems(self):
         """

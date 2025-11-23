@@ -1,7 +1,7 @@
 import math
-from phoenix6.hardware import TalonFX
-from phoenix6.configs import TalonFXConfiguration
-from phoenix6.signals import NeutralModeValue, InvertedValue
+from phoenix6.hardware import TalonFX, CANcoder
+from phoenix6.configs import TalonFXConfiguration, FeedbackConfigs
+from phoenix6.signals import NeutralModeValue, InvertedValue, FeedbackSensorSourceValue
 from phoenix6.controls import VelocityVoltage, PositionVoltage
 from wpimath.geometry import Rotation2d
 from wpimath.kinematics import SwerveModuleState, SwerveModulePosition
@@ -12,6 +12,7 @@ class PhoenixSwerveModule:
             self,
             drivingCANId: int,
             turningCANId: int,
+            feedbackDevice: int,
             chassisAngularOffset: float,
             turnMotorInverted: bool = True,
     ) -> None:
@@ -28,6 +29,9 @@ class PhoenixSwerveModule:
         #Initialize the TalonFX Controllers
         self.drivingMotor = TalonFX(drivingCANId)
         self.turningMotor = TalonFX(turningCANId)
+
+        # Initialize feedback devices
+        self.feedbackDevice = CANcoder(feedbackDevice)
 
         #Initialize Driving Motors
         drivingConfig = TalonFXConfiguration()
@@ -47,6 +51,8 @@ class PhoenixSwerveModule:
         turningConfig.slot0.k_d = 0.05
         #Use InvertedValue enum instead of bool
         turningConfig.motor_output.inverted = InvertedValue.CLOCKWISE_POSITIVE if turnMotorInverted else InvertedValue.COUNTER_CLOCKWISE_POSITIVE
+        turningConfig.feedback.feedback_sensor_source = FeedbackSensorSourceValue.FUSED_CANCODER
+        turningConfig.feedback.feedback_device = feedbackDevice
         self.turningMotor.configurator.apply(turningConfig)
 
         #Set up velocity and position requests for the motors
@@ -59,30 +65,27 @@ class PhoenixSwerveModule:
     def getState(self) -> SwerveModuleState:
         """Returns the current state of the module."""
         velocity = self.drivingMotor.get_velocity().value
-        angle = self._getTurningPosition() - self.chassisAngularOffset
+        angle = self.getTurningPosition() - self.chassisAngularOffset
 
         return SwerveModuleState(velocity, Rotation2d(angle))
 
     def getPosition(self) -> SwerveModulePosition:
         """Returns the current position of the module."""
         distance = self.drivingMotor.get_position().value
-        angle = self._getTurningPosition() - self.chassisAngularOffset
+        angle = self.getTurningPosition() - self.chassisAngularOffset
 
         return SwerveModulePosition(distance, Rotation2d(angle))
 
-    def _getTurningPosition(self) -> float:
+    def getTurningPosition(self) -> float:
         """Gets the turning motor position in radians."""
         # Convert rotations to radians (2π radians per rotation)
         return self.turningMotor.get_position().value * 2 * math.pi
 
+    def getCancoderPosition(self):
+        return 2 * math.pi * self.feedbackDevice.get_position().value
+
     def setDesiredState(self, desiredState: SwerveModuleState) -> None:
         """Sets the desired state for the module."""
-        if abs(desiredState.speed) < ModuleConstants.kDrivingMinSpeedMetersPerSecond:
-            # If speed is too low, don't move, save power
-            inXBrake = abs(abs(desiredState.angle.degrees()) - 45) < 0.01
-            if not inXBrake:
-                self.stop()
-                return
 
         # Apply chassis angular offset to the desired state
         correctedDesiredState = SwerveModuleState(
@@ -91,35 +94,24 @@ class PhoenixSwerveModule:
         )
 
         # Get the current angle for optimization
-        current_angle = Rotation2d(self._getTurningPosition())
+        cancoder_pos = self.getCancoderPosition()
 
-        # Manual optimization instead of using SwerveModuleState.optimize()
-        angle_diff = current_angle.radians() - correctedDesiredState.angle.radians()
+        if cancoder_pos is None:
+            current_angle = Rotation2d(0)
+        else:
+            current_angle = Rotation2d(cancoder_pos * 2 * math.pi)
 
-        # Normalize the angle difference to -π to π
-        while angle_diff > math.pi:
-            angle_diff -= 2 * math.pi
-        while angle_diff < -math.pi:
-            angle_diff += 2 * math.pi
-
-        # If the difference is greater than 90 degrees (π/2), flip the direction
-        #if abs(angle_diff) > math.pi / 2:
-        #    optimized_speed = -correctedDesiredState.speed
-        #    optimized_angle = Rotation2d(correctedDesiredState.angle.radians() + math.pi)
-        #else:
-        #    optimized_speed = correctedDesiredState.speed
-        #    optimized_angle = correctedDesiredState.angle
-        optimized_speed = correctedDesiredState.speed
-        optimized_angle = correctedDesiredState.angle
+        optimized = SwerveModuleState(correctedDesiredState.speed, current_angle)
 
         # Convert optimized angle to rotations
-        angle_in_rotations = optimized_angle.radians() / (2 * math.pi)
+        angle_in_rotations = optimized.angle.radians() / (2 * math.pi)
 
-        #Send commands to motors
-        self.drivingMotor.set_control(self.velocity_request.with_velocity(optimized_speed * ModuleConstants.kDrivingMotorReduction / ModuleConstants.kWheelCircumferenceMeters))
-        #print(f"Speed {optimized_speed} {optimized_speed * ModuleConstants.kDrivingMotorReduction / ModuleConstants.kWheelCircumferenceMeters}")
-        self.turningMotor.set_control(self.position_request.with_position(angle_in_rotations * ModuleConstants.kTurningMotorReduction))
-        #print(f"Target angle:{angle_in_rotations} {desiredState.angle} {Rotation2d(self.chassisAngularOffset)}")
+        # Send commands to motors
+        self.drivingMotor.set_control(self.velocity_request.with_velocity(
+            optimized.speed * ModuleConstants.kDrivingMotorReduction / ModuleConstants.kWheelCircumferenceMeters))
+
+        self.turningMotor.set_control(
+            self.position_request.with_position(angle_in_rotations * ModuleConstants.kTurningMotorReduction))
 
         self.desiredState = desiredState
 
@@ -133,5 +125,7 @@ class PhoenixSwerveModule:
             self.desiredState = SwerveModuleState(speed=0, angle=self.desiredState.angle)
 
     def resetEncoders(self) -> None:
-        """Zeroes the driving encoder."""
+        """Zeroes the Absolute Encoders."""
         self.drivingMotor.set_position(0)
+        absolute_rotations = self.feedbackDevice.get_position().value
+        self.turningMotor.set_position(absolute_rotations * ModuleConstants.kTurningMotorReduction)
