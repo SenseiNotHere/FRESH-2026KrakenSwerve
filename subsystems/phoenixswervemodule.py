@@ -114,18 +114,12 @@ class PhoenixSwerveModule:
 
         print("desiredState:", desiredState)
         print("current_angle:", current_angle)
-
-        # Manual Optimize
-        delta = desiredState.angle - current_angle
-        if abs(delta.degrees()) > 90.0:
-            optimized = SwerveModuleState(
-                -desiredState.speed,
-                desiredState.angle + Rotation2d.fromDegrees(180)
-            )
-        else:
-            optimized = desiredState
-
+        optimized = SwerveModuleState.optimize(desiredState, current_angle)
         print("optimized:", optimized)
+
+        if optimized is None:
+            print(f"Desired state {desiredState}")
+            optimized = desiredState
 
         # Wheel rotations target
         angle_in_rotations = optimized.angle.radians() / (2 * math.pi)
