@@ -3,6 +3,7 @@ from phoenix6.hardware import TalonFX,CANcoder
 from phoenix6.configs import TalonFXConfiguration, CANcoderConfiguration
 from phoenix6.signals import NeutralModeValue, InvertedValue, FeedbackSensorSourceValue
 from phoenix6.controls import VelocityVoltage, PositionVoltage
+from wpilib import SmartDashboard
 from wpimath.geometry import Rotation2d
 from wpimath.kinematics import SwerveModuleState, SwerveModulePosition
 from constants import ModuleConstants
@@ -15,7 +16,8 @@ class PhoenixSwerveModule:
             turnMotorInverted: bool,
             canCoderCANId: int,
             canCoderInverted: bool,
-            chassisAngularOffset: float
+            chassisAngularOffset: float,
+            modulePlace
     ) -> None:
         """
         :param drivingCANId: The CAN ID for the driving motor.
@@ -31,6 +33,7 @@ class PhoenixSwerveModule:
         self.drivingMotor = TalonFX(drivingCANId)
         self.turningMotor = TalonFX(turningCANId)
         self.canCoder = CANcoder(canCoderCANId)
+        self.modulePlace = modulePlace
 
         # Configure CANCoder
         canCoderConfig = CANcoderConfiguration()
@@ -63,6 +66,26 @@ class PhoenixSwerveModule:
 
         #Reset encoders to starting position
         self.resetEncoders()
+
+        # Data puts
+        # Temperatures
+        SmartDashboard.putNumber(self.modulePlace + " Driving Temp", self.drivingMotor.get_device_temp().value)
+        SmartDashboard.putNumber(self.modulePlace + " Turning Temp", self.turningMotor.get_device_temp().value)
+
+        # Positions
+        SmartDashboard.putNumber(self.modulePlace + " ABS Value", self.canCoder.get_absolute_position().value)
+        SmartDashboard.putNumber(self.modulePlace + " Turning Position", self.turningMotor.get_position().value)
+        SmartDashboard.putNumber(self.modulePlace + " Module Position", self.getTurningPosition())
+
+        # Module States
+        SmartDashboard.putNumber(self.modulePlace + " Actual State Speed", self.getState().speed)
+        SmartDashboard.putNumber(self.modulePlace + " Actual State Angle", self.getState().angle.degrees())
+        SmartDashboard.putNumber(self.modulePlace + " Desired State Speed", self.desiredState.speed)
+        SmartDashboard.putNumber(self.modulePlace + " Desired State Angle", self.desiredState.angle.degrees())
+
+        # Supply Current
+        SmartDashboard.putNumber(self.modulePlace + " Driving Current", self.drivingMotor.get_supply_current().value)
+        SmartDashboard.putNumber(self.modulePlace + " Turning Current", self.turningMotor.get_supply_current().value)
 
     def getState(self) -> SwerveModuleState:
         """Returns the current state of the module."""
@@ -103,13 +126,13 @@ class PhoenixSwerveModule:
         #print(f"[{self.drivingMotor.device_id}] DESIRED: Speed={desiredState.speed:.3f}, Angle={desiredState.angle.degrees():.1f}°")
         #print(f"[{self.drivingMotor.device_id}] CURRENT: CANCoder={cancoder_pos:.3f}rot, Motor={motor_pos:.3f}rot, Angle={current_angle_deg:.1f}°")
         
-        #if abs(desiredState.speed) < ModuleConstants.kDrivingMinSpeedMetersPerSecond:
-            # If speed is too low, don't move, save power
-        #    inXBrake = abs(abs(desiredState.angle.degrees()) - 45) < 0.01
-        #    if not inXBrake:
-        #        print(f"[{self.drivingMotor.device_id}] STOPPING - Speed too low")
-        #        self.stop()
-        #        return
+#        if abs(desiredState.speed) < ModuleConstants.kDrivingMinSpeedMetersPerSecond:
+#            # If speed is too low, don't move, save power
+#            inXBrake = abs(abs(desiredState.angle.degrees()) - 45) < 0.01
+#            if not inXBrake:
+#               print("Stopping module")
+#                self.stop()
+#                return
 
         # Apply chassis angular offset to the desired state
         correctedDesiredState = SwerveModuleState(
@@ -125,22 +148,21 @@ class PhoenixSwerveModule:
         if abs(delta.degrees()) > 90.0:
             optimized_speed = -correctedDesiredState.speed
             optimized_angle = correctedDesiredState.angle + Rotation2d(math.pi)
-            #print(f"[{self.drivingMotor.device_id}] FLIPPED - Speed: {optimized_speed:.3f}, Angle: {optimized_angle.degrees():.1f}°, Delta: {delta.degrees():.1f}°")
         else:
             optimized_speed = correctedDesiredState.speed
             optimized_angle = correctedDesiredState.angle
-            #print(f"[{self.drivingMotor.device_id}] NORMAL - Speed: {optimized_speed:.3f}, Angle: {optimized_angle.degrees():.1f}°, Delta: {delta.degrees():.1f}°")
 
         # Convert optimized angle to rotations
         angle_in_rotations = optimized_angle.radians() / (2 * math.pi)
 
         #Send commands to motors
         self.drivingMotor.set_control(self.velocity_request.with_velocity(optimized_speed * ModuleConstants.kDrivingMotorReduction / ModuleConstants.kWheelCircumferenceMeters))
-        #print(f"Speed {optimized_speed} {optimized_speed * ModuleConstants.kDrivingMotorReduction / ModuleConstants.kWheelCircumferenceMeters}")
         self.turningMotor.set_control(self.position_request.with_position(angle_in_rotations * ModuleConstants.kTurningMotorReduction))
-        #print(f"Target angle:{angle_in_rotations} {desiredState.angle} {Rotation2d(self.chassisAngularOffset)}")
 
         self.desiredState = desiredState
+
+        abs_pos = self.canCoder.get_absolute_position().value
+        print(f"CanCoder ID: {self.canCoder.device_id} Position: {abs_pos}")
 
     def stop(self):
         """Stops the module."""
@@ -154,19 +176,7 @@ class PhoenixSwerveModule:
     def resetEncoders(self) -> None:
         """Resets the drive encoders to currently read a position of 0 and the turning encoder to the absolute CANCoder angle."""
         self.drivingMotor.set_position(0)
-
-        cancoder_before = self.canCoder.get_absolute_position().value
-        motor_before = self.turningMotor.get_position().value
-        #print(f"[{self.drivingMotor.device_id}] RESET - CANCoder: {cancoder_before:.3f} rot, Motor before: {motor_before:.3f} rot")
-
         self.syncTurningEncoder()
-
-        motor_after = self.turningMotor.get_position().value
-        angle_after = self.getTurningPosition()
-        #print(f"[{self.drivingMotor.device_id}] RESET - Motor after: {motor_after:.3f} rot, Angle: {math.degrees(angle_after):.1f}°")
-
-        abs_pos = self.canCoder.get_absolute_position().value
-        print(f"CanCoder ID: {self.canCoder.device_id} Position: {abs_pos}")
 
     def getTemperature(self):
         """Gets the temperature of the module."""

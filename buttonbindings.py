@@ -9,22 +9,23 @@ class ButtonBindings:
     def __init__(self, robot_container):
         """Initialize ButtonBindings with access to the robot container
         """
-        self.robotDrive = robot_container.robotDrive
-        self.driverController = robot_container.driverController
+        self.robotContainer = robot_container
+        self.robotDrive = self.robotContainer.robotDrive
+        self.driverController = self.robotContainer.driverController
 
     def configureButtonBindings(self):
         """Configure button bindings for the robot."""
 
         # Driver Controls
         # Reset XY Position
-#        povUpDriverButton = self.driverController.pov(0)
-#        povUpDriverButton.onTrue(ResetXY(x=0.0, y=0.0, headingDegrees=0.0, drivetrain=self.robotDrive))
-#        povUpDriverButton.whileTrue(RunCommand(self.robotDrive.setX, self.robotDrive))
+        povUpDriverButton = self.driverController.pov(0)
+        povUpDriverButton.onTrue(ResetXY(x=0.0, y=0.0, headingDegrees=0.0, drivetrain=self.robotDrive))
+        povUpDriverButton.whileTrue(RunCommand(self.robotDrive.setX, self.robotDrive))
 
         # Reset Swerve Front
-#        povDownDriverButton = self.driverController.pov(180)
-#        povDownDriverButton.onTrue(ResetSwerveFront(self.robotDrive))
-        
+        povDownDriverButton = self.driverController.pov(180)
+        povDownDriverButton.onTrue(ResetSwerveFront(self.robotDrive))
+
         # X-Break
-#        povLeftDriverButton = self.driverController.pov(270)
-#        povLeftDriverButton.whileTrue(InstantCommand(self.robotDrive.setX, self.robotDrive))
+        povLeftDriverButton = self.driverController.pov(270)
+        povLeftDriverButton.whileTrue(InstantCommand(self.robotDrive.setX, self.robotDrive))

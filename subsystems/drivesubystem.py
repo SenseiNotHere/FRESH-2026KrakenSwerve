@@ -48,6 +48,7 @@ class DriveSubsystem(Subsystem):
             canCoderCANId=DrivingConstants.kFrontLeftTurningEncoder,
             canCoderInverted=ModuleConstants.kTurningEncoderInverted,
             chassisAngularOffset=DrivingConstants.kFrontLeftChassisAngularOffset * enabledChassisAngularOffset,
+            modulePlace="FL"
         )
 
         self.frontRight = PhoenixSwerveModule(
@@ -56,7 +57,8 @@ class DriveSubsystem(Subsystem):
             canCoderCANId=DrivingConstants.kFrontRightTurningEncoder,
             canCoderInverted=ModuleConstants.kTurningEncoderInverted,
             chassisAngularOffset=DrivingConstants.kFrontRightChassisAngularOffset * enabledChassisAngularOffset,
-            turnMotorInverted=ModuleConstants.kTurningMotorInverted
+            turnMotorInverted=ModuleConstants.kTurningMotorInverted,
+            modulePlace="FR"
         )
 
         self.backLeft = PhoenixSwerveModule(
@@ -65,7 +67,8 @@ class DriveSubsystem(Subsystem):
             canCoderCANId=DrivingConstants.kBackLeftTurningEncoder,
             canCoderInverted=ModuleConstants.kTurningEncoderInverted,
             chassisAngularOffset=DrivingConstants.kBackLeftChassisAngularOffset * enabledChassisAngularOffset,
-            turnMotorInverted=ModuleConstants.kTurningMotorInverted
+            turnMotorInverted=ModuleConstants.kTurningMotorInverted,
+            modulePlace="BL"
         )
 
         self.backRight = PhoenixSwerveModule(
@@ -74,7 +77,8 @@ class DriveSubsystem(Subsystem):
             canCoderCANId=DrivingConstants.kBackRightTurningEncoder,
             canCoderInverted=ModuleConstants.kTurningEncoderInverted,
             chassisAngularOffset=DrivingConstants.kBackRightChassisAngularOffset * enabledChassisAngularOffset,
-            turnMotorInverted=ModuleConstants.kTurningMotorInverted
+            turnMotorInverted=ModuleConstants.kTurningMotorInverted,
+            modulePlace="BR"
         )
 
         #RoboRIO Gyro Sensor
@@ -117,9 +121,16 @@ class DriveSubsystem(Subsystem):
             lambda speeds, feedforwards: self.drive(speeds.vx, speeds.vy, speeds.omega, True, True),
             # Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also outputs individual module feedforwards
             PPHolonomicDriveController(
-                # PPHolonomicController is the built in path following controller for holonomic drive trains
-                PIDConstants(5.0, 0.0, 0.0),  # Translation PID constants
-                PIDConstants(5.0, 0.0, 0.0)  # Rotation PID constants
+                PIDConstants(
+                    AutoConstants.kPXController,
+                    AutoConstants.kIXController,
+                    AutoConstants.kDXController
+                ), # Translation PID Values
+                PIDConstants(
+                    AutoConstants.kPThetaController,
+                    AutoConstants.kIThetaController,
+                    AutoConstants.kDThetaController
+                ) # Rotation PID Values
             ),
             AutoConstants.config,  # The robot configuration
             self.shouldFlipPath,  # Supplier to control path flipping based on alliance color
@@ -157,9 +168,9 @@ class DriveSubsystem(Subsystem):
                 self.backRight.getPosition(),
             ),
         )
-        SmartDashboard.putNumber("x", pose.x)
-        SmartDashboard.putNumber("y", pose.y)
-        SmartDashboard.putNumber("heading", pose.rotation().degrees())
+        SmartDashboard.putNumber("X Coordinate", pose.x)
+        SmartDashboard.putNumber("Y Coordinate", pose.y)
+        SmartDashboard.putNumber("Heading (deg)", pose.rotation().degrees())
         self.field.setRobotPose(pose)
 
     def getHeading(self) -> Rotation2d:
