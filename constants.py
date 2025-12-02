@@ -26,6 +26,12 @@ class DrivingConstants:
     kBackLeftTurning = 1
     kBackRightTurning = 4
 
+    # CANCoders
+    kFrontLeftTurningEncoder = 4
+    kFrontRightTurningEncoder = 3
+    kBackLeftTurningEncoder = 1
+    kBackRightTurningEncoder = 2
+
     #Other settings
     #These are the maximum speeds the robot can reach, not maximum speeds allowed.
     kMaxMetersPerSecond = 3.0

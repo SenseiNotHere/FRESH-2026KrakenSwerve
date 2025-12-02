@@ -42,30 +42,38 @@ class DriveSubsystem(Subsystem):
         enabledChassisAngularOffset = 0 if DrivingConstants.kAssumeZeroOffsets else 1
 
         self.frontLeft = PhoenixSwerveModule(
-            DrivingConstants.kFrontLeftDriving,
-            DrivingConstants.kFrontLeftTurning,
-            DrivingConstants.kFrontLeftChassisAngularOffset * enabledChassisAngularOffset,
-            turnMotorInverted=ModuleConstants.kTurningMotorInverted
+            drivingCANId=DrivingConstants.kFrontLeftDriving,
+            turningCANId=DrivingConstants.kFrontLeftTurning,
+            turnMotorInverted=ModuleConstants.kTurningMotorInverted,
+            canCoderCANId=DrivingConstants.kFrontLeftTurningEncoder,
+            canCoderInverted=ModuleConstants.kTurningEncoderInverted,
+            chassisAngularOffset=DrivingConstants.kFrontLeftChassisAngularOffset * enabledChassisAngularOffset,
         )
 
         self.frontRight = PhoenixSwerveModule(
-            DrivingConstants.kFrontRightDriving,
-            DrivingConstants.kFrontRightTurning,
-            DrivingConstants.kFrontRightChassisAngularOffset * enabledChassisAngularOffset,
+            drivingCANId=DrivingConstants.kFrontRightDriving,
+            turningCANId=DrivingConstants.kFrontRightTurning,
+            canCoderCANId=DrivingConstants.kFrontRightTurningEncoder,
+            canCoderInverted=ModuleConstants.kTurningEncoderInverted,
+            chassisAngularOffset=DrivingConstants.kFrontRightChassisAngularOffset * enabledChassisAngularOffset,
             turnMotorInverted=ModuleConstants.kTurningMotorInverted
         )
 
-        self.rearLeft = PhoenixSwerveModule(
-            DrivingConstants.kBackLeftDriving,
-            DrivingConstants.kBackLeftTurning,
-            DrivingConstants.kBackLeftChassisAngularOffset * enabledChassisAngularOffset,
+        self.backLeft = PhoenixSwerveModule(
+            drivingCANId=DrivingConstants.kBackLeftDriving,
+            turningCANId=DrivingConstants.kBackLeftTurning,
+            canCoderCANId=DrivingConstants.kBackLeftTurningEncoder,
+            canCoderInverted=ModuleConstants.kTurningEncoderInverted,
+            chassisAngularOffset=DrivingConstants.kBackLeftChassisAngularOffset * enabledChassisAngularOffset,
             turnMotorInverted=ModuleConstants.kTurningMotorInverted
         )
 
-        self.rearRight = PhoenixSwerveModule(
-            DrivingConstants.kBackRightDriving,
-            DrivingConstants.kBackRightTurning,
-            DrivingConstants.kBackRightChassisAngularOffset * enabledChassisAngularOffset,
+        self.backRight = PhoenixSwerveModule(
+            drivingCANId=DrivingConstants.kBackRightDriving,
+            turningCANId=DrivingConstants.kBackRightTurning,
+            canCoderCANId=DrivingConstants.kBackRightTurningEncoder,
+            canCoderInverted=ModuleConstants.kTurningEncoderInverted,
+            chassisAngularOffset=DrivingConstants.kBackRightChassisAngularOffset * enabledChassisAngularOffset,
             turnMotorInverted=ModuleConstants.kTurningMotorInverted
         )
 
@@ -90,8 +98,8 @@ class DriveSubsystem(Subsystem):
             (
                 self.frontLeft.getPosition(),
                 self.frontRight.getPosition(),
-                self.rearLeft.getPosition(),
-                self.rearRight.getPosition(),
+                self.backLeft.getPosition(),
+                self.backRight.getPosition(),
             ),
         )
         self.odometryHeadingOffset = Rotation2d(0)
@@ -124,8 +132,8 @@ class DriveSubsystem(Subsystem):
             (
                 self.frontLeft.getState(),
                 self.frontRight.getState(),
-                self.rearLeft.getState(),
-                self.rearRight.getState(),
+                self.backLeft.getState(),
+                self.backRight.getState(),
             )
         )
 
@@ -145,8 +153,8 @@ class DriveSubsystem(Subsystem):
             (
                 self.frontLeft.getPosition(),
                 self.frontRight.getPosition(),
-                self.rearLeft.getPosition(),
-                self.rearRight.getPosition(),
+                self.backLeft.getPosition(),
+                self.backRight.getPosition(),
             ),
         )
         SmartDashboard.putNumber("x", pose.x)
@@ -180,8 +188,8 @@ class DriveSubsystem(Subsystem):
             (
                 self.frontLeft.getPosition(),
                 self.frontRight.getPosition(),
-                self.rearLeft.getPosition(),
-                self.rearRight.getPosition(),
+                self.backLeft.getPosition(),
+                self.backRight.getPosition(),
             ),
             pose,
         )
@@ -198,8 +206,8 @@ class DriveSubsystem(Subsystem):
             (
                 self.frontLeft.getPosition(),
                 self.frontRight.getPosition(),
-                self.rearLeft.getPosition(),
-                self.rearRight.getPosition(),
+                self.backLeft.getPosition(),
+                self.backRight.getPosition(),
             ),
             newPose,
         )
@@ -342,8 +350,8 @@ class DriveSubsystem(Subsystem):
         )
         self.frontLeft.setDesiredState(fl)
         self.frontRight.setDesiredState(fr)
-        self.rearLeft.setDesiredState(rl)
-        self.rearRight.setDesiredState(rr)
+        self.backLeft.setDesiredState(rl)
+        self.backRight.setDesiredState(rr)
 
     def setX(self) -> None:
         """Sets the wheels into an X formation to prevent movement."""
@@ -351,8 +359,8 @@ class DriveSubsystem(Subsystem):
         self.frontRight.setDesiredState(
             SwerveModuleState(0, Rotation2d.fromDegrees(-45))
         )
-        self.rearLeft.setDesiredState(SwerveModuleState(0, Rotation2d.fromDegrees(-45)))
-        self.rearRight.setDesiredState(SwerveModuleState(0, Rotation2d.fromDegrees(45)))
+        self.backLeft.setDesiredState(SwerveModuleState(0, Rotation2d.fromDegrees(-45)))
+        self.backRight.setDesiredState(SwerveModuleState(0, Rotation2d.fromDegrees(45)))
 
     def setModuleStates(
             self,
@@ -369,15 +377,15 @@ class DriveSubsystem(Subsystem):
         )
         self.frontLeft.setDesiredState(fl)
         self.frontRight.setDesiredState(fr)
-        self.rearLeft.setDesiredState(rl)
-        self.rearRight.setDesiredState(rr)
+        self.backLeft.setDesiredState(rl)
+        self.backRight.setDesiredState(rr)
 
     def resetEncoders(self) -> None:
         """Resets the drive encoders to currently read a position of 0."""
         self.frontLeft.resetEncoders()
-        self.rearLeft.resetEncoders()
+        self.backLeft.resetEncoders()
         self.frontRight.resetEncoders()
-        self.rearRight.resetEncoders()
+        self.backRight.resetEncoders()
 
     def getGyroHeading(self) -> Rotation2d:
         """Returns the heading of the robot, tries to be smart when gyro is disconnected
@@ -441,8 +449,8 @@ class BadSimPhysics(object):
             states = (
                 drivetrain.frontLeft.desiredState,
                 drivetrain.frontRight.desiredState,
-                drivetrain.rearLeft.desiredState,
-                drivetrain.rearRight.desiredState,
+                drivetrain.backLeft.desiredState,
+                drivetrain.backRight.desiredState,
             )
             speeds = DrivingConstants.kDriveKinematics.toChassisSpeeds(states)
 

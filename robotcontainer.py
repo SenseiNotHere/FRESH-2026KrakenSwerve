@@ -54,12 +54,13 @@ class RobotContainer:
 #        self.buttonBindings = ButtonBindings(self)
 #        self.buttonBindings.configureButtonBindings()
 
+        # TEMPORARY: Disable movement for testing
         self.robotDrive.setDefaultCommand(
             HolonomicDrive(
                 self.robotDrive,
-                forwardSpeed=lambda: self.driverController.getRawAxis(XboxController.Axis.kLeftY),
-                leftSpeed=lambda: self.driverController.getRawAxis(XboxController.Axis.kLeftX),
-                rotationSpeed=lambda: -self.driverController.getRawAxis(XboxController.Axis.kRightX),
+                forwardSpeed=lambda: 0.0,  # Force zero
+                leftSpeed=lambda: 0.0,     # Force zero  
+                rotationSpeed=lambda: 0.0, # Force zero
                 deadband=OIConstants.kDriveDeadband,
                 fieldRelative=True,
                 rateLimit=True,
