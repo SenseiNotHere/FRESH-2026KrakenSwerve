@@ -50,7 +50,7 @@ class RobotContainer:
 
         #Setting up controllers
         self.driverController = CommandGenericHID(OIConstants.kDriverControllerPort)
-
+        self.limelight = LimelightCamera("camera")
 #        self.buttonBindings = ButtonBindings(self)
 #        self.buttonBindings.configureButtonBindings()
 
@@ -58,9 +58,9 @@ class RobotContainer:
         self.robotDrive.setDefaultCommand(
             HolonomicDrive(
                 self.robotDrive,
-                forwardSpeed=lambda: 0.0,  # Force zero
-                leftSpeed=lambda: 0.0,     # Force zero  
-                rotationSpeed=lambda: 0.0, # Force zero
+                forwardSpeed=lambda: self.driverController.getRawAxis(XboxController.Axis.kLeftY),
+                leftSpeed=lambda: self.driverController.getRawAxis(XboxController.Axis.kLeftX),
+                rotationSpeed=lambda: -self.driverController.getRawAxis(XboxController.Axis.kRightX),
                 deadband=OIConstants.kDriveDeadband,
                 fieldRelative=True,
                 rateLimit=True,

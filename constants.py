@@ -81,7 +81,7 @@ class ModuleConstants:
     kDrivingMotorReduction = 6.02
     kDriveWheelFreeSpeedRps = (kDrivingMotorFreeSpeedRps * kWheelCircumferenceMeters) / kDrivingMotorReduction
 
-    kTurningMotorReduction = 287 / 11.
+    kTurningMotorReduction = 287 / 11.0
     kTurningEncoderPositionFactor = math.tau  # radian
     kTurningEncoderVelocityFactor = math.tau / 60.0  # radians per second
 
