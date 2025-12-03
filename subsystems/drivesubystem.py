@@ -25,7 +25,7 @@ from pathplannerlib.controller import PPHolonomicDriveController
 from pathplannerlib.config import RobotConfig, PIDConstants
 
 from constants import DrivingConstants, ModuleConstants, AutoConstants
-from commands.holonomicdrive import HolonomicDrive
+from commands.holonomicDrive import HolonomicDrive
 
 from wpimath import applyDeadband
 import commands2

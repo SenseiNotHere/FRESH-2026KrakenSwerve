@@ -2,7 +2,7 @@ from wpilib import XboxController, PS4Controller
 from commands2 import cmd, InstantCommand, RunCommand
 from commands2.button import CommandGenericHID
 
-from commands.reset_xy import ResetXY, ResetSwerveFront
+from commands.reset_XY import ResetXY, ResetSwerveFront
 
 
 class ButtonBindings:
@@ -20,7 +20,6 @@ class ButtonBindings:
         # Reset XY Position
         povUpDriverButton = self.driverController.pov(0)
         povUpDriverButton.onTrue(ResetXY(x=0.0, y=0.0, headingDegrees=0.0, drivetrain=self.robotDrive))
-        povUpDriverButton.whileTrue(RunCommand(self.robotDrive.setX, self.robotDrive))
 
         # Reset Swerve Front
         povDownDriverButton = self.driverController.pov(180)

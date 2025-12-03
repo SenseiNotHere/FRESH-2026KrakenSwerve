@@ -26,7 +26,7 @@ from wpimath.kinematics import (
 
 from subsystems.drivesubystem import DriveSubsystem, AutoBuilder, BadSimPhysics
 from subsystems.limelightcamera import LimelightCamera
-from commands.holonomicdrive import HolonomicDrive
+from commands.holonomicDrive import HolonomicDrive
 from buttonbindings import ButtonBindings
 from constants import OIConstants
 
