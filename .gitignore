@@ -1,3 +1,24 @@
-./__pycache__
-./commands/__pycache__
-./subsystems/__pycache__
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# RobotPy cache
+./robotpy*
+
+# Logs
+*.log
+
+# VSCode / JetBrains / Editor stuff
+.vscode/
+.idea/
+
+# Build artifacts
+build/
+dist/
