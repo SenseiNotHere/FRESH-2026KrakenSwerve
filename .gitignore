@@ -23,3 +23,6 @@ env/
 # Build artifacts
 build/
 dist/
+
+# CTRE Sim
+.ctre_sim/
