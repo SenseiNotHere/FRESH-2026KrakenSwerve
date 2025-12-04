@@ -40,8 +40,8 @@ class PhoenixSwerveModule:
         # Configure CANCoder
         canCoderConfig = CANcoderConfiguration()
         canCoderConfig.magnet_sensor.magnet_offset = self.canCoderOffset
-        canCoderConfig.sensor_direction = InvertedValue.CLOCKWISE_POSITIVE if canCoderInverted else InvertedValue.COUNTER_CLOCKWISE_POSITIVE
-        self.canCoder.configurator.apply(canCoderConfig)
+        canCoderConfig.sensor_direction = (InvertedValue.CLOCKWISE_POSITIVE if canCoderInverted else InvertedValue.COUNTER_CLOCKWISE_POSITIVE)
+        self.canCoder.configurator.apply(canCoderConfig, 0.1)
 
         #Initialize Driving Motors
         drivingConfig = TalonFXConfiguration()
@@ -64,9 +64,9 @@ class PhoenixSwerveModule:
         turningConfig = TalonFXConfiguration()
         turningConfig.motor_output.neutral_mode = NeutralModeValue.BRAKE
         #Set appropriate PID values for position control
-        turningConfig.slot0.k_p = 8.0
+        turningConfig.slot0.k_p = 4.0 # old is 8.0
         turningConfig.slot0.k_i = 0.0
-        turningConfig.slot0.k_d = 0.05
+        turningConfig.slot0.k_d = 0.05 # old is 0.05
         turningConfig.motor_output.inverted = InvertedValue.CLOCKWISE_POSITIVE if turnMotorInverted else InvertedValue.COUNTER_CLOCKWISE_POSITIVE
         self.turningMotor.configurator.apply(turningConfig)
 
@@ -124,6 +124,7 @@ class PhoenixSwerveModule:
         absolute_rot = self.canCoder.get_absolute_position().value  # 0 => 1 rotations
         motor_rot = absolute_rot * ModuleConstants.kTurningMotorReduction
         self.turningMotor.set_position(motor_rot)
+        print(f"{self.modulePlace} SYNC | abs={absolute_rot:.4f} rot, motor={motor_rot:.4f} rot, angleDeg={math.degrees(self.getTurningPosition()):.2f}")
 
     def getTurningPosition(self) -> float:
         """Gets the turning motor position in radians using the relative encoder."""
@@ -133,25 +134,6 @@ class PhoenixSwerveModule:
 
     def setDesiredState(self, desiredState: SwerveModuleState) -> None:
         """Sets the desired state for the module."""
-
-        #print(f">>> Speed= {desiredState.speed}")
-        # Debug current state
-        current_angle_rad = self.getTurningPosition()
-        current_angle_deg = math.degrees(current_angle_rad)
-        cancoder_pos = self.canCoder.get_absolute_position().value
-        motor_pos = self.turningMotor.get_position().value
-        
-        #print(f"[{self.drivingMotor.device_id}] DESIRED: Speed={desiredState.speed:.3f}, Angle={desiredState.angle.degrees():.1f}°")
-        #print(f"[{self.drivingMotor.device_id}] CURRENT: CANCoder={cancoder_pos:.3f}rot, Motor={motor_pos:.3f}rot, Angle={current_angle_deg:.1f}°")
-        
-#        if abs(desiredState.speed) < ModuleConstants.kDrivingMinSpeedMetersPerSecond:
-#            # If speed is too low, don't move, save power
-#            inXBrake = abs(abs(desiredState.angle.degrees()) - 45) < 0.01
-#            if not inXBrake:
-#               print("Stopping module")
-#                self.stop()
-#                return
-
         # Apply chassis angular offset to the desired state
         correctedDesiredState = SwerveModuleState(
             desiredState.speed,
@@ -163,12 +145,15 @@ class PhoenixSwerveModule:
 
         delta = correctedDesiredState.angle - current_angle
 
-        if abs(delta.degrees()) > 90.0:
-            optimized_speed = -correctedDesiredState.speed
-            optimized_angle = correctedDesiredState.angle + Rotation2d(math.pi)
-        else:
-            optimized_speed = correctedDesiredState.speed
-            optimized_angle = correctedDesiredState.angle
+        #if abs(delta.degrees()) > 90.0:
+        #    optimized_speed = -correctedDesiredState.speed
+        #    optimized_angle = correctedDesiredState.angle + Rotation2d(math.pi)
+        #else:
+        #    optimized_speed = correctedDesiredState.speed
+        #    optimized_angle = correctedDesiredState.angle
+
+        optimized_speed = correctedDesiredState.speed
+        optimized_angle = correctedDesiredState.angle
 
         # Convert optimized angle to rotations
         angle_in_rotations = optimized_angle.radians() / (2 * math.pi)
@@ -179,8 +164,10 @@ class PhoenixSwerveModule:
 
         self.desiredState = desiredState
 
-#        abs_pos = self.canCoder.get_absolute_position().value
-#        print(f"CanCoder ID: {self.canCoder.device_id} Position: {abs_pos}")
+        encoder_id = self.canCoder.device_id
+        encoder_pos = self.canCoder.get_absolute_position().value
+        #print(f"Encoder {encoder_id} at {self.modulePlace} - position: {encoder_pos}")
+        #print(f"{self.modulePlace} angleDeg = {math.degrees(self.getTurningPosition())}")
 
     def stop(self):
         """Stops the module."""

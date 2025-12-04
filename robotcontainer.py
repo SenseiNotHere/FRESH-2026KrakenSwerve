@@ -51,6 +51,7 @@ class RobotContainer:
         #Setting up controllers
         self.driverController = CommandGenericHID(OIConstants.kDriverControllerPort)
         self.limelight = LimelightCamera("camera")
+        self.limelight.setPiPMode(1)
         self.buttonBindings = ButtonBindings(self)
         self.buttonBindings.configureButtonBindings()
 

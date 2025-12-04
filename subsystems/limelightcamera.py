@@ -76,7 +76,6 @@ class LimelightCamera(Subsystem):
         """
         self.table.putNumber("stream", mode)
 
-
 def _fix_name(name: str):
     if not name:
         name = "limelight"

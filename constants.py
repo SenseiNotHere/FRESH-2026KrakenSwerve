@@ -56,19 +56,19 @@ class DrivingConstants:
     ]
     kDriveKinematics = SwerveDrive4Kinematics(*kModulePositions)
 
-    kAssumeZeroOffsets = True
+    kAssumeZeroOffsets = False
 
     # set the above to == False, if you are manually zeroing (and you have to tinker with offsets below)
-    kFrontLeftChassisAngularOffset = units.degreesToRadians(180)
-    kFrontRightChassisAngularOffset = 0
-    kBackLeftChassisAngularOffset = units.degreesToRadians(183)
-    kBackRightChassisAngularOffset = units.degreesToRadians(-2)
+    kFrontLeftChassisAngularOffset = 0  # FL
+    kFrontRightChassisAngularOffset = 0  # FR
+    kBackLeftChassisAngularOffset = 0  # BL
+    kBackRightChassisAngularOffset = 0  # BR
 
     kGyroReversed = -1
 
 class ModuleConstants:
     #One needs to be false and the other true! Which is false and which is true depends on which swerve type you have.
-    kTurningEncoderInverted = False # not used
+    kTurningEncoderInverted = False
     kTurningMotorInverted = False
 
     kDrivingMotorPinionTeeth = 14
@@ -78,10 +78,10 @@ class ModuleConstants:
     kWheelDiameterMeters = 0.0965
     kWheelCircumferenceMeters = kWheelDiameterMeters * math.pi
     # 45 teeth on the wheel's bevel gear, 22 teeth on the first-stage spur gear, 15 teeth on the bevel pinion
-    kDrivingMotorReduction = 6.02
+    kDrivingMotorReduction = 6.12
     kDriveWheelFreeSpeedRps = (kDrivingMotorFreeSpeedRps * kWheelCircumferenceMeters) / kDrivingMotorReduction
+    kTurningMotorReduction = 12.6
 
-    kTurningMotorReduction = 287 / 11.0
     kTurningEncoderPositionFactor = math.tau  # radian
     kTurningEncoderVelocityFactor = math.tau / 60.0  # radians per second
 
