@@ -26,3 +26,19 @@ dist/
 
 # CTRE Sim
 ctre_sim/
+
+# macOS Stuff
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100/
+.Trashes/
+.fseventsd/
+.DocumentRevisions-V100/
+.TemporaryItems/
+.VolumeIcon.icns
+.apdisk
+.AppleDB
+.AppleDesktop

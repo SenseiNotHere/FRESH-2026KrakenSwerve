@@ -155,28 +155,46 @@ class PhoenixSwerveModule:
         """
         Set the desired state for this module.
         """
-        corrected = SwerveModuleState(
+        desired_module = SwerveModuleState(
             desiredState.speed,
             desiredState.angle + Rotation2d(self.chassisAngularOffset),
         )
 
-        # Optimize relative to current angle
-        optimized = self._optimizeState(corrected)
+        # Optimize in module frame
+        optimized = self._optimizeState(desired_module)
 
+        # Drive
         motor_rps = optimized.speed / self.driveMotorRotToMeters
-
-        # Convert desired angle to steering motor rotations
-        angle_rad = optimized.angle.radians()
-        motor_rot = angle_rad * self.radToSteerMotorRot
-
-        # Send control requests
         self.drivingMotor.set_control(
             self.velocity_request.with_velocity(motor_rps)
         )
+
+        # Turn
+        # Current angle of the module (radians, module frame)
+        current_angle_rad = self.getTurningPosition()
+
+        # Desired angle (optimized, module frame)
+        target_angle_rad = optimized.angle.radians()
+
+        # Smallest angle difference
+        delta_rad = target_angle_rad - current_angle_rad
+        while delta_rad > math.pi:
+            delta_rad -= 2 * math.pi
+        while delta_rad < -math.pi:
+            delta_rad += 2 * math.pi
+
+        # Convert that delta to motor rotations
+        delta_motor_rot = delta_rad * self.radToSteerMotorRot
+
+        # New motor target = current motor position + delta
+        current_motor_rot = self.turningMotor.get_position().value
+        target_motor_rot = current_motor_rot + delta_motor_rot
+
         self.turningMotor.set_control(
-            self.position_request.with_position(motor_rot)
+            self.position_request.with_position(target_motor_rot)
         )
 
+        # Original value
         self.desiredState = desiredState
 
     def stop(self):
