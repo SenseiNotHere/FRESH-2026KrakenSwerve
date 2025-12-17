@@ -94,6 +94,11 @@ class ModuleConstants:
     kDriveWheelFreeSpeedRps = (kDrivingMotorFreeSpeedRps * kWheelCircumferenceMeters) / kDrivingMotorReduction
     kTurningMotorReduction = 12.6
 
+    # radians are converted internally, these are MOTOR ROT units
+    kTurningSyncIntervalSeconds = 0.25  # how often we check drift
+    kTurningKalmanGain = 0.05  # 0 = disabled, 0.02–0.08 is sane
+    kTurningDriftDegrees = 5.0  # hard snap threshold
+
     kTurningEncoderPositionFactor = math.tau  # radian
     kTurningEncoderVelocityFactor = math.tau / 60.0  # radians per second
 

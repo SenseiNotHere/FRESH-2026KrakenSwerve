@@ -180,19 +180,6 @@ class DriveSubsystem(Subsystem):
         if self.simPhysics is not None:
             self.simPhysics.periodic()
 
-        # Periodically sync wheel angles to absolute encoders to prevent drift
-        # Only syncs if drift exceeds ~5 degrees to avoid violent corrections
-        current_time = wpilib.Timer.getFPGATimestamp()
-        if not hasattr(self, '_lastSyncTime'):
-            self._lastSyncTime = current_time
-        
-        if current_time - self._lastSyncTime > 1.0:  # Check every 1 second
-            self.frontLeft.syncTurningEncoder()
-            self.frontRight.syncTurningEncoder()
-            self.backLeft.syncTurningEncoder()
-            self.backRight.syncTurningEncoder()
-            self._lastSyncTime = current_time
-
         # Update the odometry in the periodic block
         pose = self.odometry.update(
             self.getGyroHeading(),
