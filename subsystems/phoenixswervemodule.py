@@ -137,10 +137,6 @@ class PhoenixSwerveModule(Subsystem):
             self.turningMotor.set_position(current_motor_rot + correction)
 
     def periodic(self) -> None:
-        # Never touch encoder state while enabled
-        if DriverStation.isEnabled():
-            return
-
         # Kalman disabled? Do nothing.
         if ModuleConstants.kTurningKalmanGain <= 0:
             return

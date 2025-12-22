@@ -180,6 +180,12 @@ class DriveSubsystem(Subsystem):
         if self.simPhysics is not None:
             self.simPhysics.periodic()
 
+        # Sync turning encoders on all modules to prevent drift
+        self.frontLeft.periodic()
+        self.frontRight.periodic()
+        self.backLeft.periodic()
+        self.backRight.periodic()
+
         # Update the odometry in the periodic block
         pose = self.odometry.update(
             self.getGyroHeading(),
