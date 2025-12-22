@@ -38,7 +38,7 @@ class DrivingConstants:
     kMaxAngularSpeed = math.tau
 
     #Slew rate settings
-    kDirectionSlewRate = 1.2  # radians per second
+    kDirectionSlewRate = 2.0  # radians per second
     kMagnitudeSlewRate = 1.8  # percent per second (1 = 100%)
     kRotationalSlewRate = 2.0  # percent per second (1 = 100%)
 

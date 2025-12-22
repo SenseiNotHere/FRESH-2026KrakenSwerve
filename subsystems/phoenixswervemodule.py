@@ -136,7 +136,7 @@ class PhoenixSwerveModule(Subsystem):
             * (ModuleConstants.kTurningDriftDegrees / 360.0)
         )
 
-        if force:
+        if force or abs(error) > drift_threshold:
             self.turningMotor.set_position(adjusted_target)
             return
 
@@ -144,7 +144,7 @@ class PhoenixSwerveModule(Subsystem):
             correction = -ModuleConstants.kTurningKalmanGain * error
             self.turningMotor.set_position(current_motor_rot + correction)
 
-    def periodic(self) -> None:
+    def periodic(self) -> None:        
         # Kalman disabled? Do nothing.
         if ModuleConstants.kTurningKalmanGain <= 0:
             return
