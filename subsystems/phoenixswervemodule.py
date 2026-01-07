@@ -2,12 +2,8 @@ import math
 from commands2 import Subsystem
 from phoenix6.hardware import TalonFX, CANcoder
 from phoenix6.configs import TalonFXConfiguration, CANcoderConfiguration, CurrentLimitsConfigs
-from phoenix6.signals import (
-    NeutralModeValue,
-    InvertedValue,
-    SensorDirectionValue,
-)
-from phoenix6.controls import VelocityVoltage, PositionVoltage
+from phoenix6.signals import NeutralModeValue, InvertedValue, SensorDirectionValue
+from phoenix6.controls import VelocityVoltage, PositionVoltage, MotionMagicVoltage
 from phoenix6.orchestra import Orchestra
 from wpilib import Timer, DriverStation
 from wpimath.geometry import Rotation2d
@@ -108,6 +104,7 @@ class PhoenixSwerveModule(Subsystem):
         # Control requests
         self.velocity_request = VelocityVoltage(0).with_slot(0)
         self.position_request = PositionVoltage(0).with_slot(0)
+        self.turning_request = MotionMagicVoltage(0).with_slot(0)
 
         # Kalman timing
         self.nextSyncTime = 0.0
@@ -128,7 +125,7 @@ class PhoenixSwerveModule(Subsystem):
         self.drivingMotor.set_position(0)
         self.syncTurningEncoder(force=True)
 
-    def syncAngle(self):
+    def _syncAngle(self):
         """
         Synchronizes the turning motor encoder with the CANcoder's absolute position.
         """

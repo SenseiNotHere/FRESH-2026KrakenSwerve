@@ -128,8 +128,8 @@ class DriveSubsystem(Subsystem):
             self.getPose,  # Robot pose supplier
             self.resetOdometry,  # Reset odometry at auto start
             self.getRobotRelativeSpeeds,  # MUST be robot-relative speeds
-            lambda speeds, feedforwards: self.driveRobotRelativeChassisSpeeds(speeds),
-        PPHolonomicDriveController(
+            lambda speeds, _: self.driveRobotRelativeChassisSpeeds(speeds),
+            PPHolonomicDriveController(
                 PIDConstants(
                     AutoConstants.kPXController,
                     AutoConstants.kIXController,
@@ -433,6 +433,9 @@ class DriveSubsystem(Subsystem):
         self.frontRight.setDesiredState(fr)
         self.backLeft.setDesiredState(rl)
         self.backRight.setDesiredState(rr)
+
+        SmartDashboard.putNumber("Auto vx", speeds.vx)
+        SmartDashboard.putNumber("Auto omega", speeds.omega)
 
     def setX(self) -> None:
         """Sets the wheels into an X formation to prevent movement."""
