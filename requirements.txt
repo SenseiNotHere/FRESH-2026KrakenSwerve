@@ -1,6 +1,7 @@
-robotpy==2025.3.2.2
-robotpy-commands-v2
-robotpy-navx
-wpilib
-phoenix6
-pyfrc
+robotpy==2026.1.1b1
+robotpy-commands-v2==2026.1.1b1
+robotpy-navx==2026.0.0b1
+wpilib==2026.1.1b1
+phoenix6==26.1.0
+pyfrc==2026.0.1
+robotpy-pathplannerlib==2025.2.7

@@ -1,11 +1,13 @@
 import math
+
+import wpilib
 from commands2 import Subsystem
 from phoenix6.hardware import TalonFX, CANcoder
 from phoenix6.configs import TalonFXConfiguration, CANcoderConfiguration, CurrentLimitsConfigs
-from phoenix6.signals import NeutralModeValue, InvertedValue, SensorDirectionValue
+from phoenix6.signals import NeutralModeValue, InvertedValue, SensorDirectionValue, FeedbackSensorSourceValue
 from phoenix6.controls import VelocityVoltage, PositionVoltage, MotionMagicVoltage
 from phoenix6.orchestra import Orchestra
-from wpilib import Timer, DriverStation
+from wpilib import Timer, DriverStation, SmartDashboard
 from wpimath.geometry import Rotation2d
 from wpimath.kinematics import SwerveModuleState, SwerveModulePosition
 
@@ -69,7 +71,11 @@ class PhoenixSwerveModule(Subsystem):
         drivingConfig.slot0.k_p = ModuleConstants.kDrivingP
         drivingConfig.slot0.k_i = ModuleConstants.kDrivingI
         drivingConfig.slot0.k_d = ModuleConstants.kDrivingD
+        drivingConfig.feedback.sensor_source = FeedbackSensorSourceValue.ROTOR_SENSOR
         self.drivingMotor.configurator.apply(drivingConfig)
+
+        self.drivingMotor.get_velocity().set_update_frequency(100)
+        self.drivingMotor.get_position().set_update_frequency(50)
 
         # Turn motor config
         turningConfig = TalonFXConfiguration()
@@ -82,7 +88,16 @@ class PhoenixSwerveModule(Subsystem):
         turningConfig.slot0.k_p = ModuleConstants.kTurningP
         turningConfig.slot0.k_i = ModuleConstants.kTurningI
         turningConfig.slot0.k_d = ModuleConstants.kTurningD
+        turningConfig.feedback.sensor_source = FeedbackSensorSourceValue.FUSED_CANCODER
+        turningConfig.feedback.feedback_remote_sensor_id = canCoderCANId
+        turningConfig.feedback.rotor_to_sensor_ratio = ModuleConstants.kTurningMotorReduction
+        turningConfig.closed_loop_general.continuous_wrap = True
+        turningConfig.motion_magic.motion_magic_cruise_velocity = ModuleConstants.kMotionMagicCruiseVelocity
+        turningConfig.motion_magic.motion_magic_acceleration = ModuleConstants.kMotionMagicAcceleration
         self.turningMotor.configurator.apply(turningConfig)
+
+        self.turningMotor.get_position().set_update_frequency(100)  # Hz
+        self.turningMotor.get_velocity().set_update_frequency(100)
 
         # Current limits
         # Driving Current Limits
@@ -102,9 +117,8 @@ class PhoenixSwerveModule(Subsystem):
         self.turningMotor.configurator.apply(turningCurrentLimits)
 
         # Control requests
-        self.velocity_request = VelocityVoltage(0).with_slot(0)
-        self.position_request = PositionVoltage(0).with_slot(0)
-        self.turning_request = MotionMagicVoltage(0).with_slot(0)
+        self.velocity_request = VelocityVoltage(0).with_slot(0).with_feed_forward(0.0)
+        self.turning_request = MotionMagicVoltage(0).with_slot(0).with_feed_forward(0.0)
 
         # Kalman timing
         self.nextSyncTime = 0.0
@@ -115,70 +129,50 @@ class PhoenixSwerveModule(Subsystem):
         # Orchestra stuff
         self.orchestra = Orchestra([self.drivingMotor, self.turningMotor])
 
-    # Encoder Sync
+    # Encoders
 
     def resetEncoders(self) -> None:
-        """
-        Resets the driving motor encoder to zero and syncs the turning motor encoder
-        with the CANcoder's absolute position.
-        """
+        # Zero drive distance
         self.drivingMotor.set_position(0)
-        self.syncTurningEncoder(force=True)
 
-    def _syncAngle(self):
-        """
-        Synchronizes the turning motor encoder with the CANcoder's absolute position.
-        """
-        abs_angle = self.canCoder.get_absolute_position()
-        abs_angle.refresh()
-        self.turningMotor.set_position(abs_angle.value * ModuleConstants.kTurningMotorReduction)
-
-    def syncTurningEncoder(self, force: bool = False) -> None:
-        """
-        Syncs the turning motor's encoder with the absolute position from the CANcoder.
-        :param force: If True, forces a sync.
-        """
-        abs_signal = self.canCoder.get_absolute_position()
-        abs_signal.refresh()
-        absolute_rot = abs_signal.value  # 0–1 rotations
-
-        current_motor_rot = self.turningMotor.get_position().value
-        target_motor_rot = absolute_rot * ModuleConstants.kTurningMotorReduction
-
-        diff = current_motor_rot - target_motor_rot
-        full_rotations = round(diff / ModuleConstants.kTurningMotorReduction)
-        adjusted_target = (
-            target_motor_rot
-            + full_rotations * ModuleConstants.kTurningMotorReduction
+        # One-time absolute alignment for steering
+        abs_rot = self.canCoder.get_absolute_position().value  # 0–1 rotations
+        self.turningMotor.set_position(
+            abs_rot * ModuleConstants.kTurningMotorReduction
         )
 
-        error = current_motor_rot - adjusted_target
-        drift_threshold = (
-            ModuleConstants.kTurningMotorReduction
-            * (ModuleConstants.kTurningDriftDegrees / 360.0)
-        )
+        abs_sig = self.canCoder.get_absolute_position()
+        abs_sig.refresh()
+        abs_rot = abs_sig.value  # 0..1 rotations
 
-        if force or abs(error) > drift_threshold:
-            self.turningMotor.set_position(adjusted_target)
-            return
+        print(f"[{self.modulePlace}] abs_rot={abs_rot:.6f} offset={self.canCoderOffset:.6f}")
 
-        if ModuleConstants.kTurningKalmanGain > 0:
-            correction = -ModuleConstants.kTurningKalmanGain * error
-            self.turningMotor.set_position(current_motor_rot + correction)
+        abs_sig = self.canCoder.get_absolute_position()
+        abs_sig.refresh()
+
+        if not abs_sig.status.is_ok():
+            print(f"[{self.modulePlace}] CANcoder not ready yet")
 
     # Periodic
 
-    def periodic(self) -> None:        
-        # Kalman disabled? Do nothing.
-        if ModuleConstants.kTurningKalmanGain <= 0:
-            return
+    def periodic(self):
+        # Only correct when module is basically not moving
+        if abs(self.desiredState.speed) < 0.05:
+            abs_rot = self.canCoder.get_absolute_position().value  # 0–1 rotations
+            motor_rot = self.turningMotor.get_position().value
 
-        now = Timer.getFPGATimestamp()
-        if now < self.nextSyncTime:
-            return
+            target_rot = abs_rot * ModuleConstants.kTurningMotorReduction
 
-        self.nextSyncTime = now + ModuleConstants.kTurningSyncIntervalSeconds
-        self.syncTurningEncoder()
+            # wrap target near current position
+            diff = motor_rot - target_rot
+            wraps = round(diff / ModuleConstants.kTurningMotorReduction)
+            target_rot += wraps * ModuleConstants.kTurningMotorReduction
+
+            error = motor_rot - target_rot
+
+            # only nudge if error is meaningful (ex: > ~2 degrees)
+            if abs(error) > (2 / 360) * ModuleConstants.kTurningMotorReduction:
+                self.turningMotor.set_position(target_rot)
 
     # State / Odometry
 
@@ -210,68 +204,44 @@ class PhoenixSwerveModule(Subsystem):
     # Optimize
 
     def _optimizeState(self, desired: SwerveModuleState) -> SwerveModuleState:
-        """
-        Optimize the desired state to minimize rotation.
+        current = Rotation2d(self.getTurningPosition())
+        target = desired.angle
 
-        :param desired: The desired SwerveModuleState.
-        :return: The optimized SwerveModuleState.
-        """
-        current_angle = Rotation2d(self.getTurningPosition())
-        target_angle = desired.angle
-
-        delta = target_angle.radians() - current_angle.radians()
-        while delta > math.pi:
-            delta -= 2 * math.pi
-        while delta < -math.pi:
-            delta += 2 * math.pi
-
-        optimized_angle = Rotation2d(current_angle.radians() + delta)
-        optimized_speed = desired.speed
+        # signed smallest-angle difference, in radians (-pi .. pi)
+        delta = target.radians() - current.radians()
+        delta = math.atan2(math.sin(delta), math.cos(delta))
 
         if abs(delta) > math.pi / 2:
-            optimized_speed = -optimized_speed
-            optimized_angle = Rotation2d(
-                optimized_angle.radians() + math.pi
+            return SwerveModuleState(
+                -desired.speed,
+                Rotation2d(target.radians() + math.pi)
             )
 
-        return SwerveModuleState(optimized_speed, optimized_angle)
+        return desired
 
     # Control
 
     def setDesiredState(self, desiredState: SwerveModuleState) -> None:
-        """
-        Sets the desired state for the swerve module.
-
-        :param desiredState: The desired state to set.
-        :type desiredState: SwerveModuleState
-        """
+        # Apply chassis angular offset once
         desired_module = SwerveModuleState(
             desiredState.speed,
             desiredState.angle + Rotation2d(self.chassisAngularOffset),
         )
 
+        # Optimize for speed flip ONLY (no angle wrapping)
         optimized = self._optimizeState(desired_module)
 
-        # Drive
+        # ---------------- DRIVE ----------------
         motor_rps = optimized.speed / self.driveMotorRotToMeters
         self.drivingMotor.set_control(
             self.velocity_request.with_velocity(motor_rps)
         )
 
-        # Turn
-        current_motor_rot = self.turningMotor.get_position().value
-        target_motor_rot = optimized.angle.radians() * self.radToSteerMotorRot
-
-        delta = target_motor_rot - current_motor_rot
-        while delta > math.pi * self.radToSteerMotorRot:
-            delta -= 2 * math.pi * self.radToSteerMotorRot
-        while delta < -math.pi * self.radToSteerMotorRot:
-            delta += 2 * math.pi * self.radToSteerMotorRot
+        # ---------------- TURN ----------------
+        target_rot = optimized.angle.radians() * self.radToSteerMotorRot
 
         self.turningMotor.set_control(
-            self.position_request.with_position(
-                current_motor_rot + delta
-            )
+            self.turning_request.with_position(target_rot)
         )
 
         self.desiredState = desiredState

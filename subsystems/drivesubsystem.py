@@ -20,16 +20,15 @@ import swerveutils
 from .phoenixswervemodule import PhoenixSwerveModule
 import navx
 
-from pathplannerlib.auto import AutoBuilder
-from pathplannerlib.controller import PPHolonomicDriveController
-from pathplannerlib.config import RobotConfig, PIDConstants
+#from pathplannerlib.auto import AutoBuilder
+#from pathplannerlib.controller import PPHolonomicDriveController
+#from pathplannerlib.config import RobotConfig, PIDConstants
 
 from phoenix6.orchestra import Orchestra
 
 from constants import DrivingConstants, ModuleConstants, AutoConstants
 from commands.holonomicDrive import HolonomicDrive
 
-from wpimath import applyDeadband
 import commands2
 
 class DriveSubsystem(Subsystem):
@@ -124,27 +123,27 @@ class DriveSubsystem(Subsystem):
 
         self.simPhysics = None
 
-        AutoBuilder.configure(
-            self.getPose,  # Robot pose supplier
-            self.resetOdometry,  # Reset odometry at auto start
-            self.getRobotRelativeSpeeds,  # MUST be robot-relative speeds
-            lambda speeds, _: self.driveRobotRelativeChassisSpeeds(speeds),
-            PPHolonomicDriveController(
-                PIDConstants(
-                    AutoConstants.kPXController,
-                    AutoConstants.kIXController,
-                    AutoConstants.kDXController
-                ),
-                PIDConstants(
-                    AutoConstants.kPThetaController,
-                    AutoConstants.kIThetaController,
-                    AutoConstants.kDThetaController
-                )
-            ),
-            AutoConstants.config,  # RobotConfig
-            self.shouldFlipPath,  # Alliance-based flipping
-            self  # Subsystem requirement
-        )
+#        AutoBuilder.configure(
+#            self.getPose,  # Robot pose supplier
+#            self.resetOdometry,  # Reset odometry at auto start
+#            self.getRobotRelativeSpeeds,  # MUST be robot-relative speeds
+#            lambda speeds, _: self.driveRobotRelativeChassisSpeeds(speeds),
+#            PPHolonomicDriveController(
+#                PIDConstants(
+#                    AutoConstants.kPXController,
+#                    AutoConstants.kIXController,
+#                    AutoConstants.kDXController
+#                ),
+#                PIDConstants(
+#                    AutoConstants.kPThetaController,
+#                    AutoConstants.kIThetaController,
+#                    AutoConstants.kDThetaController
+#                )
+#            ),
+#            AutoConstants.config,  # RobotConfig
+#            self.shouldFlipPath,  # Alliance-based flipping
+#            self  # Subsystem requirement
+#        )
 
         # Initialize Orchestra for playing music through all motors
         self.orchestra = Orchestra([

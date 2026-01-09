@@ -8,7 +8,7 @@ from wpimath.trajectory import TrapezoidProfileRadians
 from phoenix6.hardware import talon_fx
 from phoenix6.signals import NeutralModeValue
 
-from pathplannerlib.config import RobotConfig, ModuleConfig, DCMotor
+#from pathplannerlib.config import RobotConfig, ModuleConfig, DCMotor
 
 
 # Motor Specs
@@ -24,13 +24,13 @@ class DrivingConstants:
     # CAN IDs - Drive Motors
     kFrontLeftDriving = 7
     kFrontRightDriving = 5
-    kBackLeftDriving = 2
+    kBackLeftDriving = 1
     kBackRightDriving = 3
 
     # CAN IDs - Turning Motors
     kFrontLeftTurning = 8
     kFrontRightTurning = 6
-    kBackLeftTurning = 1
+    kBackLeftTurning = 2
     kBackRightTurning = 4
 
     # CAN IDs - CANCoders
@@ -73,6 +73,10 @@ class DrivingConstants:
     # Gyro
     kGyroReversed = -1
 
+    kLockVxDeadband = 0.05  # m/s
+    kLockVyDeadband = 0.05  # m/s
+    kLockOmegaDeadband = 0.10  # rad/s
+
 
 # Individual Module Constants
 
@@ -87,10 +91,10 @@ class ModuleConstants:
     kBackRightDriveMotorInverted = False
 
     # Absolute Encoder Magnet Offsets
-    kFrontLeftTurningEncoderOffset = 0.264404296875
-    kFrontRightTurningEncoderOffset = 0.218505859375
-    kBackLeftTurningEncoderOffset = -0.0810546875
-    kBackRightTurningEncoderOffset = 0.0966796875
+    kFrontLeftTurningEncoderOffset = 0.264892578125
+    kFrontRightTurningEncoderOffset = 0.22265625
+    kBackLeftTurningEncoderOffset = -0.080078125
+    kBackRightTurningEncoderOffset = 0.09521484375
 
     # Mechanical Configuration
     kDrivingMotorPinionTeeth = 14
@@ -115,7 +119,7 @@ class ModuleConstants:
 
     # Turning Sync / Drift Control
     kTurningSyncIntervalSeconds = 0.25
-    kTurningKalmanGain = 0.05
+    kTurningKalmanGain = 0
     kTurningDriftDegrees = 10.0
 
     kTurningSyncMaxVelocity = 0.5
@@ -133,14 +137,15 @@ class ModuleConstants:
     kTurningP = 3.0
     kTurningI = 0
     kTurningD = 0
-    kTurningFF = 0.05
+    kTurningFF = 0.15
+    kTurningDeadbandRot = 0.002  # ~0.7 degrees
+
     kTurningMinOutput = -1
     kTurningMaxOutput = 1
 
-    # Motion Magic (Turning)
-    kTurnCruiseVelocity = 80.0
-    kTurnAcceleration = 160.0
-    kTurnJerk = 1600.0
+    # Motion Magic
+    kMotionMagicCruiseVelocity = 25.0
+    kMotionMagicAcceleration = 100.0
 
     # Motor Neutral Modes
     kDrivingMotorIdleMode = talon_fx.signals.NeutralModeValue(NeutralModeValue.BRAKE)
@@ -154,6 +159,11 @@ class ModuleConstants:
 
     # Misc
     kDrivingMinSpeedMetersPerSecond = 0.01
+    kSteerDriveCouplingRatio = 3.857142857142857
+    kSteerKs = 0.1
+    kSteerHoldDeadband = math.radians(0.25) * (
+            1.0 / ((2 * math.pi) / kTurningMotorReduction)
+    )
 
 
 # Operator Interface
@@ -167,25 +177,25 @@ class OIConstants:
 
 class AutoConstants:
     # PathPlanner Module Config
-    moduleConfig = ModuleConfig(
-        maxDriveVelocityMPS=DrivingConstants.kMaxMetersPerSecond,
-        driveMotor=DCMotor.krakenX60(),
-        driveCurrentLimit=ModuleConstants.kDrivingMotorCurrentLimit,
-        numMotors=4,
-        wheelRadiusMeters=ModuleConstants.kWheelDiameterMeters / 2,
-        wheelCOF=1.0
-    )
+#    moduleConfig = ModuleConfig(
+#        maxDriveVelocityMPS=DrivingConstants.kMaxMetersPerSecond,
+#        driveMotor=DCMotor.krakenX60(),
+#        driveCurrentLimit=ModuleConstants.kDrivingMotorCurrentLimit,
+#        numMotors=4,
+#        wheelRadiusMeters=ModuleConstants.kWheelDiameterMeters / 2,
+#        wheelCOF=1.0
+#    )
 
-    config = RobotConfig(
-        massKG=60.00,
-        MOI=8.0,
-        moduleConfig=moduleConfig,
-        moduleOffsets=DrivingConstants.kModulePositions
-    )
+#    config = RobotConfig(
+#        massKG=60.00,
+#        MOI=8.0,
+#        moduleConfig=moduleConfig,
+#        moduleOffsets=DrivingConstants.kModulePositions
+#    )
 
-    config.maxModuleSpeed = DrivingConstants.kMaxMetersPerSecond
-    config.driveBaseRadius = 0.45
-    config.maxCentripetalAcceleration = 3.0
+ #   config.maxModuleSpeed = DrivingConstants.kMaxMetersPerSecond
+ #   config.driveBaseRadius = 0.45
+ #   config.maxCentripetalAcceleration = 3.0
 
     # Driver Feel
     kUseSqrtControl = True

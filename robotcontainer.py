@@ -18,7 +18,7 @@ from wpimath.kinematics import (
     SwerveDrive4Odometry,
 )
 
-from subsystems.drivesubsystem import DriveSubsystem, AutoBuilder, BadSimPhysics
+from subsystems.drivesubsystem import DriveSubsystem, BadSimPhysics#,AutoBuilder
 from subsystems.limelightcamera import LimelightCamera
 from subsystems.limelight_localizer import LimelightLocalizer
 from commands.holonomicDrive import HolonomicDrive
@@ -44,8 +44,8 @@ class RobotContainer:
             self.robotDrive.simPhysics = BadSimPhysics(self.robotDrive, robot)
         
         # Auto chooser
-        self.autoChooser = AutoBuilder.buildAutoChooser()
-        SmartDashboard.putData("Auto Chooser", self.autoChooser)
+#        self.autoChooser = AutoBuilder.buildAutoChooser()
+#        SmartDashboard.putData("Auto Chooser", self.autoChooser)
 
         # Test chooser
         self.testChooser = wpilib.SendableChooser()
@@ -118,7 +118,8 @@ class RobotContainer:
         """
         :returns: the command to run in autonomous mode.
         """
-        command = self.autoChooser.getSelected()
+#       command = self.autoChooser.getSelected()
+        command = None
         if command is None:
             print("WARNING: No autonomous routines selected!") # Will return a command that does nothing
             return InstantCommand()
