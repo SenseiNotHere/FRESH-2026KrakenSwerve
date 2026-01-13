@@ -1,6 +1,7 @@
-robotpy==2025.3.2.2
+robotpy
 robotpy-commands-v2
 robotpy-navx
 wpilib
 phoenix6
 pyfrc
+robotpy-pathplannerlib

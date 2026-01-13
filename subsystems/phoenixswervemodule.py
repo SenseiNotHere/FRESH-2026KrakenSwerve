@@ -125,6 +125,14 @@ class PhoenixSwerveModule(Subsystem):
         self.drivingMotor.set_position(0)
         self.syncTurningEncoder(force=True)
 
+    def resetWheels(self) -> None:
+        """Resets the wheels to absolute zero rotation."""
+        self.drivingMotor.set_position(0)
+        self._syncAngle()
+        abs = self.canCoder.get_absolute_position()
+        abs.refresh()
+        self.turningMotor.set_position(abs.value * ModuleConstants.kTurningMotorReduction)
+
     def _syncAngle(self):
         """
         Synchronizes the turning motor encoder with the CANcoder's absolute position.
@@ -168,7 +176,7 @@ class PhoenixSwerveModule(Subsystem):
 
     # Periodic
 
-    def periodic(self) -> None:        
+    def periodic(self) -> None:
         # Kalman disabled? Do nothing.
         if ModuleConstants.kTurningKalmanGain <= 0:
             return

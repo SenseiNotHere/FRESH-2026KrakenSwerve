@@ -18,13 +18,14 @@ from wpimath.kinematics import (
     SwerveDrive4Odometry,
 )
 
-from subsystems.drivesubsystem import DriveSubsystem, AutoBuilder, BadSimPhysics
+from subsystems.drivesubsystem import DriveSubsystem, BadSimPhysics,AutoBuilder
 from subsystems.limelightcamera import LimelightCamera
 from subsystems.limelight_localizer import LimelightLocalizer
+from subsystems.shooter import Shooter
 from commands.holonomicDrive import HolonomicDrive
 from commands.approach import ApproachTag
 from buttonbindings import ButtonBindings
-from constants import OIConstants
+from constants import OIConstants, ShooterConstants
 
 from subsystems.phoenixswervemodule import PhoenixSwerveModule
 from constants import *
@@ -104,6 +105,10 @@ class RobotContainer:
                 square=True,
             )
         )
+
+        # Shooter
+#        self.shooter = Shooter(motorCANID=ShooterConstants.kMotor1CANID, motorInverted=False)
+
 
         # Initialize button bindings
         self.buttonBindings = ButtonBindings(self)

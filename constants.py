@@ -21,25 +21,25 @@ class KrakenX60:
 # Drivetrain / Chassis Constants
 
 class DrivingConstants:
-    # CAN IDs - Drive Motors
+    # CAN IDs – Drive Motors
     kFrontLeftDriving = 7
     kFrontRightDriving = 5
-    kBackLeftDriving = 2
+    kBackLeftDriving = 1
     kBackRightDriving = 3
 
-    # CAN IDs - Turning Motors
+    # CAN IDs – Turning Motors
     kFrontLeftTurning = 8
     kFrontRightTurning = 6
-    kBackLeftTurning = 1
+    kBackLeftTurning = 2
     kBackRightTurning = 4
 
-    # CAN IDs - CANCoders
+    # CAN IDs – Absolute Encoders
     kFrontLeftTurningEncoder = 4
     kFrontRightTurningEncoder = 3
     kBackLeftTurningEncoder = 1
     kBackRightTurningEncoder = 2
 
-    # Max Robot Speeds (physical limits)
+    # Physical Limits
     kMaxMetersPerSecond = 3.0
     kMaxAngularSpeed = math.tau
 
@@ -48,33 +48,36 @@ class DrivingConstants:
     kMagnitudeSlewRate = 1.8      # percent/s
     kRotationalSlewRate = 2.0     # percent/s
 
-    # Chassis Geometry
+    # Robot Geometry
     kTrackWidth = units.inchesToMeters(26.5)
     kWheelBase = units.inchesToMeters(26.5)
 
     kModulePositions = [
-        Translation2d(kWheelBase / 2,  kTrackWidth / 2),
-        Translation2d(kWheelBase / 2, -kTrackWidth / 2),
-        Translation2d(-kWheelBase / 2,  kTrackWidth / 2),
-        Translation2d(-kWheelBase / 2, -kTrackWidth / 2),
+        Translation2d(+kWheelBase / 2, +kTrackWidth / 2),   # Front Left
+        Translation2d(+kWheelBase / 2, -kTrackWidth / 2),   # Front Right
+        Translation2d(-kWheelBase / 2, +kTrackWidth / 2),   # Back Left
+        Translation2d(-kWheelBase / 2, -kTrackWidth / 2),   # Back Right
     ]
 
     kDriveKinematics = SwerveDrive4Kinematics(*kModulePositions)
 
-    # Absolute Encoder Offsets
+    # Absolute Encoder Usage
     kAssumeZeroOffsets = False
 
-    # Only used if assumeZeroOffsets == False
-    kFrontLeftChassisAngularOffset = 0
-    kFrontRightChassisAngularOffset = 0
-    kBackLeftChassisAngularOffset = 0
-    kBackRightChassisAngularOffset = 0
+    kFrontLeftChassisAngularOffset = 0.0
+    kFrontRightChassisAngularOffset = 0.0
+    kBackLeftChassisAngularOffset = 0.0
+    kBackRightChassisAngularOffset = 0.0
 
     # Gyro
     kGyroReversed = -1
 
+    # Lock Deadbands
+    kLockVxDeadband = 0.05      # m/s
+    kLockVyDeadband = 0.05      # m/s
+    kLockOmegaDeadband = 0.10  # rad/s
 
-# Individual Module Constants
+# Individual Swerve Module Constants
 
 class ModuleConstants:
     # Motor / Encoder Inversion
@@ -86,13 +89,13 @@ class ModuleConstants:
     kBackLeftDriveMotorInverted = True
     kBackRightDriveMotorInverted = False
 
-    # Absolute Encoder Magnet Offsets
-    kFrontLeftTurningEncoderOffset = 0.264404296875
-    kFrontRightTurningEncoderOffset = 0.218505859375
-    kBackLeftTurningEncoderOffset = -0.0810546875
-    kBackRightTurningEncoderOffset = 0.0966796875
+    # Absolute Encoder Offsets (rotations)
+    kFrontLeftTurningEncoderOffset = 0.264892578125
+    kFrontRightTurningEncoderOffset = 0.22265625
+    kBackLeftTurningEncoderOffset = -0.080078125
+    kBackRightTurningEncoderOffset = 0.09521484375
 
-    # Mechanical Configuration
+    # Gear Ratios / Mechanics
     kDrivingMotorPinionTeeth = 14
     kDrivingMotorReduction = 6.12
     kTurningMotorReduction = 12.6
@@ -100,8 +103,8 @@ class ModuleConstants:
     kWheelDiameterMeters = 0.0965
     kWheelCircumferenceMeters = kWheelDiameterMeters * math.pi
 
-    # Derived Drive Speeds
-    kDrivingMotorFreeSpeedRps = KrakenX60.kFreeSpeedRpm / 60
+    # Derived Drive Values
+    kDrivingMotorFreeSpeedRps = KrakenX60.kFreeSpeedRpm / 60.0
     kDriveWheelFreeSpeedRps = (
         kDrivingMotorFreeSpeedRps * kWheelCircumferenceMeters
     ) / kDrivingMotorReduction
@@ -110,10 +113,10 @@ class ModuleConstants:
     kTurningEncoderPositionFactor = math.tau
     kTurningEncoderVelocityFactor = math.tau / 60.0
 
-    kTurningEncoderPositionPIDMinInput = 0
+    kTurningEncoderPositionPIDMinInput = 0.0
     kTurningEncoderPositionPIDMaxInput = kTurningEncoderPositionFactor
 
-    # Turning Sync / Drift Control
+    # Sync / Drift Control
     kTurningSyncIntervalSeconds = 0.25
     kTurningKalmanGain = 0.05
     kTurningDriftDegrees = 10.0
@@ -121,30 +124,41 @@ class ModuleConstants:
     kTurningSyncMaxVelocity = 0.5
     kDrivingSyncMaxVelocity = 0.2
 
-    # Drive PID
+    # Drive PID + FF
     kDrivingP = 0.3
-    kDrivingI = 0
-    kDrivingD = 0
+    kDrivingI = 0.0
+    kDrivingD = 0.0
+    kDrivingS = 0.0
+    kDrivingV = 0.124
     kDrivingFF = 1 / kDriveWheelFreeSpeedRps
-    kDrivingMinOutput = -1
-    kDrivingMaxOutput = 1
 
-    # Turning PID
+    kDrivingMinOutput = -1.0
+    kDrivingMaxOutput = 1.0
+
+    # Turning PID + FF
     kTurningP = 3.0
-    kTurningI = 0
-    kTurningD = 0
-    kTurningFF = 0.05
-    kTurningMinOutput = -1
-    kTurningMaxOutput = 1
+    kTurningI = 0.0
+    kTurningD = 0.0
+    kTurningS = 0.1
+    kTurningV = 2.49
+    kTurningA = 0.0
+    kTurningFF = 0.15
 
-    # Motion Magic (Turning)
-    kTurnCruiseVelocity = 80.0
-    kTurnAcceleration = 160.0
-    kTurnJerk = 1600.0
+    kTurningDeadbandRot = 0.002
+    kTurningMinOutput = -1.0
+    kTurningMaxOutput = 1.0
 
-    # Motor Neutral Modes
-    kDrivingMotorIdleMode = talon_fx.signals.NeutralModeValue(NeutralModeValue.BRAKE)
-    kTurningMotorIdleMode = talon_fx.signals.NeutralModeValue(NeutralModeValue.COAST)
+    # Motion Magic
+    kMotionMagicCruiseVelocity = 25.0
+    kMotionMagicAcceleration = 100.0
+
+    # Neutral Modes
+    kDrivingMotorIdleMode = talon_fx.signals.NeutralModeValue(
+        NeutralModeValue.BRAKE
+    )
+    kTurningMotorIdleMode = talon_fx.signals.NeutralModeValue(
+        NeutralModeValue.COAST
+    )
 
     # Current Limits
     kDrivingMotorCurrentLimit = 70
@@ -152,8 +166,14 @@ class ModuleConstants:
     kTurningMotorCurrentLimit = 40
     kTurningStatorCurrentLimit = 60
 
-    # Misc
+    # Misc / Coupling
     kDrivingMinSpeedMetersPerSecond = 0.01
+    kSteerDriveCouplingRatio = 3.857142857142857
+    kSteerKs = 0.1
+
+    kSteerHoldDeadband = math.radians(0.25) * (
+        1.0 / ((2 * math.pi) / kTurningMotorReduction)
+    )
 
 
 # Operator Interface
@@ -166,7 +186,7 @@ class OIConstants:
 # Autonomous / PathPlanner
 
 class AutoConstants:
-    # PathPlanner Module Config
+    # PathPlanner Robot Config
     moduleConfig = ModuleConfig(
         maxDriveVelocityMPS=DrivingConstants.kMaxMetersPerSecond,
         driveMotor=DCMotor.krakenX60(),
@@ -177,7 +197,7 @@ class AutoConstants:
     )
 
     config = RobotConfig(
-        massKG=60.00,
+        massKG=60.0,
         MOI=8.0,
         moduleConfig=moduleConfig,
         moduleOffsets=DrivingConstants.kModulePositions
@@ -193,15 +213,15 @@ class AutoConstants:
     # Trajectory Limits
     kMaxMetersPerSecond = 1.2
     kMaxAccelerationMetersPerSecondSquared = 3.5
+
     kMaxAngularSpeedRadiansPerSecond = 5.0
     kMaxAngularSpeedRadiansPerSecondSquared = 25.0
 
-    # Holonomic PID (Safe to Tune)
+    # Holonomic PID
     kPXController = 5.0
     kPYController = 5.0
     kPThetaController = 6.0
 
-    # Holonomic PID (Danger Zone)
     kIXController = 0.0
     kIYController = 0.0
     kIThetaController = 0.0
@@ -210,8 +230,26 @@ class AutoConstants:
     kDYController = 0.0
     kDThetaController = 0.0
 
-    # Theta Motion Constraints
+    # Theta Constraints
     kThetaControllerConstraints = TrapezoidProfileRadians.Constraints(
         kMaxAngularSpeedRadiansPerSecond,
         kMaxAngularSpeedRadiansPerSecondSquared
     )
+
+# Shooter Constants
+
+class ShooterConstants:
+    # CAN IDs
+    kMotor1CANID = 1
+    kMotor2CANID = 2
+
+    # RPM Limits
+    kMinRPM = 600        # minimum sensible non-zero RPM
+    kMaxRPM = 6000
+
+    # Control Gains (Velocity)
+    # Scaled for RPM-based control
+    kFF = 1.4 / 10000
+    kP = 5.0 / 10000
+    kD = 0.0 / 10000
+

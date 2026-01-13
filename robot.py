@@ -39,6 +39,7 @@ class MyRobot(commands2.TimedCommandRobot):
 
     def autonomousInit(self) -> None:
         """This autonomous runs the autonomous command selected by your RobotContainer class."""
+        self.robotContainer.robotDrive.resetWheels()
         self.autonomousCommand = self.robotContainer.getAutonomousCommand()
 
         # schedule the autonomous command (example)
@@ -49,6 +50,7 @@ class MyRobot(commands2.TimedCommandRobot):
         """This function is called periodically during autonomous"""
 
     def teleopInit(self) -> None:
+        self.robotContainer.robotDrive.resetWheels()
         # This makes sure that the autonomous stops running when
         # teleop starts running. If you want the autonomous to
         # continue until interrupted by another command, remove

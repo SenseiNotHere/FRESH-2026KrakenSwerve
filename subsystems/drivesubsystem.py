@@ -29,7 +29,6 @@ from phoenix6.orchestra import Orchestra
 from constants import DrivingConstants, ModuleConstants, AutoConstants
 from commands.holonomicDrive import HolonomicDrive
 
-from wpimath import applyDeadband
 import commands2
 
 class DriveSubsystem(Subsystem):
@@ -127,7 +126,7 @@ class DriveSubsystem(Subsystem):
         AutoBuilder.configure(
             self.getPose,  # Robot pose supplier
             self.resetOdometry,  # Reset odometry at auto start
-            self.getRobotRelativeSpeeds,  # MUST be robot-relative speeds
+           self.getRobotRelativeSpeeds,  # MUST be robot-relative speeds
             lambda speeds, _: self.driveRobotRelativeChassisSpeeds(speeds),
             PPHolonomicDriveController(
                 PIDConstants(
@@ -406,6 +405,11 @@ class DriveSubsystem(Subsystem):
         ySpeedDelivered = ySpeedCommanded * DrivingConstants.kMaxMetersPerSecond
         rotDelivered = self.currentRotation * DrivingConstants.kMaxAngularSpeed
 
+        SmartDashboard.putBoolean(
+            "Pure Rotation Mode",
+            abs(xSpeedDelivered) < 0.01 and abs(ySpeedDelivered) < 0.01 and abs(rotDelivered) > 0.1
+        )
+
         swerveModuleStates = DrivingConstants.kDriveKinematics.toSwerveModuleStates(
             ChassisSpeeds.fromFieldRelativeSpeeds(
                 xSpeedDelivered,
@@ -416,6 +420,17 @@ class DriveSubsystem(Subsystem):
             if fieldRelative
             else ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered)
         )
+
+        if abs(xSpeedDelivered) < 0.01 and abs(ySpeedDelivered) < 0.01 and abs(rotDelivered) > 0.1:
+            SmartDashboard.putNumber(
+                "FL Expected (deg)",
+                swerveModuleStates[0].angle.degrees()
+            )
+            SmartDashboard.putNumber(
+                "FR Expected (deg)",
+                swerveModuleStates[1].angle.degrees()
+            )
+
         fl, fr, rl, rr = SwerveDrive4Kinematics.desaturateWheelSpeeds(
             swerveModuleStates, DrivingConstants.kMaxMetersPerSecond
         )
@@ -470,6 +485,36 @@ class DriveSubsystem(Subsystem):
         self.backLeft.resetEncoders()
         self.frontRight.resetEncoders()
         self.backRight.resetEncoders()
+
+    def resetWheels(self) -> None:
+        """Resets the wheels to absolute zero rotation."""
+        self.frontLeft.resetWheels()
+        self.backLeft.resetWheels()
+        self.frontRight.resetWheels()
+        self.backRight.resetWheels()
+
+    def isSteerReady(self, tolerance_deg=2.0) -> bool:
+        """
+        Returns True if all swerve modules are within tolerance of their desired angle.
+        :param tolerance_deg: Allowed angle error (degrees) before a module is considered aligned.
+        :return:
+        """
+        modules = [
+            self.frontLeft,
+            self.frontRight,
+            self.backLeft,
+            self.backRight,
+        ]
+
+        for m in modules:
+            error = abs(
+                m.getTurningPosition()
+                - m.desiredState.angle.radians()
+            )
+            if math.degrees(error) > tolerance_deg:
+                return False
+
+        return True
 
     def getGyroHeading(self) -> Rotation2d:
         """Returns the heading of the robot, tries to be smart when gyro is disconnected
