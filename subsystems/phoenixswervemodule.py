@@ -184,22 +184,20 @@ class PhoenixSwerveModule(Subsystem):
         """
         current_angle = Rotation2d(self.getTurningPosition())
         target_angle = desired.angle
+        flip = False
 
         delta = target_angle.radians() - current_angle.radians()
-        while delta > math.pi:
-            delta -= 2 * math.pi
-        while delta < -math.pi:
-            delta += 2 * math.pi
+
+        # this loop can be optimized, but let's first make sure it works
+        while delta > math.pi / 2:
+            delta -= math.pi
+            flip = not flip
+        while delta < -math.pi / 2:
+            delta += math.pi
+            flip = not flip
 
         optimized_angle = Rotation2d(current_angle.radians() + delta)
-        optimized_speed = desired.speed
-
-        if abs(delta) > math.pi / 2:
-            optimized_speed = -optimized_speed
-            optimized_angle = Rotation2d(
-                optimized_angle.radians() + math.pi
-            )
-
+        optimized_speed = -desired.speed if flip else desired.speed
         return SwerveModuleState(optimized_speed, optimized_angle)
 
     # Control
