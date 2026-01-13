@@ -397,6 +397,10 @@ class DriveSubsystem(Subsystem):
             )
             self.currentRotation = self.rotLimiter.calculate(rot)
 
+            SmartDashboard.putNumber("drivetrain/directionGoal", self.currentTranslationDir)
+            SmartDashboard.putNumber("drivetrain/speedGoal", self.currentTranslationMag)
+            SmartDashboard.putNumber("drivetrain/rotGoal", self.currentRotation)
+
         else:
             self.currentRotation = rot
 
@@ -485,13 +489,6 @@ class DriveSubsystem(Subsystem):
         self.backLeft.resetEncoders()
         self.frontRight.resetEncoders()
         self.backRight.resetEncoders()
-
-    def resetWheels(self) -> None:
-        """Resets the wheels to absolute zero rotation."""
-        self.frontLeft.resetWheels()
-        self.backLeft.resetWheels()
-        self.frontRight.resetWheels()
-        self.backRight.resetWheels()
 
     def isSteerReady(self, tolerance_rad=2.0/57.) -> bool:
         """
