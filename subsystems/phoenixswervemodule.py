@@ -12,7 +12,8 @@ from wpimath.kinematics import SwerveModuleState, SwerveModulePosition
 from constants import ModuleConstants
 
 
-DEBUG_FUSED_ANGLE = True
+DEBUG_FUSED_ANGLE = False
+DEBUG_TARGET_ANGLE = True
 
 class PhoenixSwerveModule(Subsystem):
     def __init__(
@@ -226,6 +227,12 @@ class PhoenixSwerveModule(Subsystem):
         steering_goal = self.steerFusedAngle.to_relative_rotations(
             optimized.angle.radians() / (2 * math.pi)
         )
+
+        if DEBUG_TARGET_ANGLE:
+            SmartDashboard.putNumber(f"swerveAngle_{self.modulePlace}/desired", desiredState.angle.degrees())
+            SmartDashboard.putNumber(f"swerveAngle_{self.modulePlace}/optimized", optimized.angle.degrees())
+            SmartDashboard.putNumber(f"swerveAngle_{self.modulePlace}/goal", Rotation2d.fromRotations(steering_goal).degrees())
+
         self.turningMotor.set_control(
             self.position_request.with_position(
                 steering_goal * ModuleConstants.kTurningMotorReduction
