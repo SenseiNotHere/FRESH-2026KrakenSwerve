@@ -225,12 +225,12 @@ class PhoenixSwerveModule(Subsystem):
         )
 
         # Turn
-        desired_rotations = self.steerFusedAngle.to_absolute_rotations(
+        steering_goal = self.steerFusedAngle.to_relative_rotations(
             optimized.angle.radians() / (2 * math.pi)
         )
         self.turningMotor.set_control(
             self.position_request.with_position(
-                desired_rotations * ModuleConstants.kTurningMotorReduction
+                steering_goal * ModuleConstants.kTurningMotorReduction
             )
         )
 
