@@ -252,9 +252,6 @@ class DriveSubsystem(Subsystem):
         )
         self.odometryHeadingOffset = self.odometry.getPose().rotation() - self.getGyroHeading()
 
-        self.field = Field2d()
-        SmartDashboard.putData("Field", self.field)
-
     def adjustOdometry(self, dTrans: Translation2d, dRot: Rotation2d):
         """Adjusts the odometry by a specified translation and rotation delta.
         :param dTrans: The translation delta to apply.
