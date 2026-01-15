@@ -342,11 +342,6 @@ class DriveSubsystem(Subsystem):
         if rateLimit:
             targetChassisSpeeds.vx, targetChassisSpeeds.vy, targetChassisSpeeds.omega = slewedX, slewedY, slewedRot
 
-        # debug these chassis speed targets, if needed
-        SmartDashboard.putNumber("drivetrain/xSpeedTarget", targetChassisSpeeds.vx)
-        SmartDashboard.putNumber("drivetrain/ySpeedTarget", targetChassisSpeeds.vy)
-        SmartDashboard.putNumber("drivetrain/rotSpeedTarget", targetChassisSpeeds.omega)
-
         # from chassis speed targets, calculate and set the wheel speeds targets
         swerveModuleStates = DrivingConstants.kDriveKinematics.toSwerveModuleStates(targetChassisSpeeds)
         fl, fr, rl, rr = SwerveDrive4Kinematics.desaturateWheelSpeeds(
