@@ -60,7 +60,7 @@ class LimelightLocalizer(Subsystem):
         cameraHeadingOnRobot: Rotation2d,
         cameraPitchAngleDegrees: float = 0.0,
         minPercentFrame: float = 0.07,
-        maxRotationSpeed: float = 999,
+        maxRotationSpeed: float = 120,
     ) -> None:
         """
         :param camera: camera to add
