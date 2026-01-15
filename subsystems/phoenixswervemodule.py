@@ -12,8 +12,8 @@ from wpimath.kinematics import SwerveModuleState, SwerveModulePosition
 from constants import ModuleConstants
 
 
-DEBUG_FUSED_ANGLE = True
-DEBUG_TARGET_ANGLE = True
+DEBUG_FUSED_ANGLE = False
+DEBUG_TARGET_ANGLE = False
 
 class PhoenixSwerveModule(Subsystem):
     def __init__(
@@ -25,12 +25,10 @@ class PhoenixSwerveModule(Subsystem):
         canCoderCANId: int,
         canCoderInverted: bool,
         canCoderOffset: float,
-        chassisAngularOffset: float,
         modulePlace: str,
     ) -> None:
         super().__init__()
 
-        self.chassisAngularOffset = chassisAngularOffset
         self.desiredState = SwerveModuleState(0.0, Rotation2d())
         self.modulePlace = modulePlace
 
@@ -162,7 +160,7 @@ class PhoenixSwerveModule(Subsystem):
         """
         motor_rps = self.drivingMotor.get_velocity().value
         wheel_mps = motor_rps * self.driveMotorRpsToMps
-        angle = self.getTurningPosition() - self.chassisAngularOffset
+        angle = self.getTurningPosition()
         return SwerveModuleState(wheel_mps, Rotation2d(angle))
 
     def getPosition(self) -> SwerveModulePosition:
@@ -171,7 +169,7 @@ class PhoenixSwerveModule(Subsystem):
         """
         motor_rot = self.drivingMotor.get_position().value
         wheel_meters = motor_rot * self.driveMotorRotToMeters
-        angle = self.getTurningPosition() - self.chassisAngularOffset
+        angle = self.getTurningPosition()
         return SwerveModulePosition(wheel_meters, Rotation2d(angle))
 
     # Optimize
@@ -212,7 +210,7 @@ class PhoenixSwerveModule(Subsystem):
         """
         desired_module = SwerveModuleState(
             desiredState.speed,
-            desiredState.angle + Rotation2d(self.chassisAngularOffset),
+            desiredState.angle,
         )
 
         optimized = self._optimizeState(desired_module)

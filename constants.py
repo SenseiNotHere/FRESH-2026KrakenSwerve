@@ -60,14 +60,6 @@ class DrivingConstants:
 
     kDriveKinematics = SwerveDrive4Kinematics(*kModulePositions)
 
-    # Absolute Encoder Usage
-    kAssumeZeroOffsets = False
-
-    kFrontLeftChassisAngularOffset = 0.0
-    kFrontRightChassisAngularOffset = 0.0
-    kBackLeftChassisAngularOffset = 0.0
-    kBackRightChassisAngularOffset = 0.0
-
     # Gyro
     kGyroReversed = -1
 

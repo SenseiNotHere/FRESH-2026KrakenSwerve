@@ -39,8 +39,6 @@ class DriveSubsystem(Subsystem):
 
         self.maxSpeedScaleFactor = maxSpeedScaleFactor
 
-        enabledChassisAngularOffset = 0 if DrivingConstants.kAssumeZeroOffsets else 1
-
         self.frontLeft = PhoenixSwerveModule(
             drivingCANId=DrivingConstants.kFrontLeftDriving,
             turningCANId=DrivingConstants.kFrontLeftTurning,
@@ -49,7 +47,6 @@ class DriveSubsystem(Subsystem):
             canCoderCANId=DrivingConstants.kFrontLeftTurningEncoder,
             canCoderInverted=ModuleConstants.kTurningEncoderInverted,
             canCoderOffset=ModuleConstants.kFrontLeftTurningEncoderOffset,
-            chassisAngularOffset=DrivingConstants.kFrontLeftChassisAngularOffset * enabledChassisAngularOffset,
             modulePlace="FL"
         )
 
@@ -61,7 +58,6 @@ class DriveSubsystem(Subsystem):
             canCoderCANId=DrivingConstants.kFrontRightTurningEncoder,
             canCoderInverted=ModuleConstants.kTurningEncoderInverted,
             canCoderOffset=ModuleConstants.kFrontRightTurningEncoderOffset,
-            chassisAngularOffset=DrivingConstants.kFrontRightChassisAngularOffset * enabledChassisAngularOffset,
             modulePlace="FR"
         )
 
@@ -73,7 +69,6 @@ class DriveSubsystem(Subsystem):
             canCoderCANId=DrivingConstants.kBackLeftTurningEncoder,
             canCoderInverted=ModuleConstants.kTurningEncoderInverted,
             canCoderOffset=ModuleConstants.kBackLeftTurningEncoderOffset,
-            chassisAngularOffset=DrivingConstants.kBackLeftChassisAngularOffset * enabledChassisAngularOffset,
             modulePlace="BL"
         )
 
@@ -85,7 +80,6 @@ class DriveSubsystem(Subsystem):
             canCoderCANId=DrivingConstants.kBackRightTurningEncoder,
             canCoderInverted=ModuleConstants.kTurningEncoderInverted,
             canCoderOffset=ModuleConstants.kBackRightTurningEncoderOffset,
-            chassisAngularOffset=DrivingConstants.kBackRightChassisAngularOffset * enabledChassisAngularOffset,
             modulePlace="BR"
         )
 
