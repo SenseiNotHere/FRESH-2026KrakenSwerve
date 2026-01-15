@@ -44,9 +44,8 @@ class DrivingConstants:
     kMaxAngularSpeed = math.tau
 
     # Slew Rate Limiting
-    kDirectionSlewRate = 2.0      # rad/s
-    kMagnitudeSlewRate = 1.8      # percent/s
-    kRotationalSlewRate = 2.0     # percent/s
+    kMagnitudeSlewRate = 9.8      # (m/s) / s  =  9.8 means acceleration of up to 1g is allowed in X or Y direction
+    kRotationalSlewRate = 12.0     # (rad/s) / s
 
     # Robot Geometry
     kTrackWidth = units.inchesToMeters(26.5)

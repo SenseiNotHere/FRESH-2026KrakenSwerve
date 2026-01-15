@@ -16,7 +16,6 @@ from wpimath.kinematics import (
 )
 from wpilib import SmartDashboard, Field2d, DriverStation
 
-import swerveutils
 from .phoenixswervemodule import PhoenixSwerveModule
 import navx
 
@@ -96,13 +95,9 @@ class DriveSubsystem(Subsystem):
         self._lastGyroAngle = 0
         self._lastGyroState = "ok"
 
-        #Slew rate filter variables for controlling lateral acceleration
-        self.currentTranslationDir = 0.0
-        self.currentTranslationMag = 0.0
-
-        self.magLimiter = SlewRateLimiter(DrivingConstants.kMagnitudeSlewRate)
+        self.xSpeedLimiter = SlewRateLimiter(DrivingConstants.kMagnitudeSlewRate)
+        self.ySpeedLimiter = SlewRateLimiter(DrivingConstants.kMagnitudeSlewRate)
         self.rotLimiter = SlewRateLimiter(DrivingConstants.kRotationalSlewRate)
-        self.prevTime = wpilib.Timer.getFPGATimestamp()
 
         #Odometry class for tracking robot pose
         self.odometry = SwerveDrive4Odometry(
@@ -126,7 +121,7 @@ class DriveSubsystem(Subsystem):
         AutoBuilder.configure(
             self.getPose,  # Robot pose supplier
             self.resetOdometry,  # Reset odometry at auto start
-           self.getRobotRelativeSpeeds,  # MUST be robot-relative speeds
+            self.getRobotRelativeSpeeds,  # MUST be robot-relative speeds
             lambda speeds, _: self.driveRobotRelativeChassisSpeeds(speeds),
             PPHolonomicDriveController(
                 PIDConstants(
@@ -318,125 +313,48 @@ class DriveSubsystem(Subsystem):
         :param square:        Whether to square the inputs (useful for manual control)
         """
 
+        # Apply constraints and transformations to the user (joystick) input
         if square:
             rot = rot * abs(rot)
-            norm = math.sqrt(xSpeed * xSpeed + ySpeed * ySpeed)
+            norm = math.hypot(xSpeed, ySpeed)
             xSpeed = xSpeed * norm
             ySpeed = ySpeed * norm
-
         if (xSpeed != 0 or ySpeed != 0) and self.maxSpeedScaleFactor is not None:
-            norm = math.sqrt(xSpeed * xSpeed + ySpeed * ySpeed)
+            norm = math.hypot(xSpeed, ySpeed)
             scale = abs(self.maxSpeedScaleFactor() / norm)
             if scale < 1:
                 xSpeed = xSpeed * scale
                 ySpeed = ySpeed * scale
-
         xSpeedCommanded = xSpeed
         ySpeedCommanded = ySpeed
 
-        if rateLimit:
-            # Convert XY to polar for rate limiting
-            inputTranslationDir = math.atan2(ySpeed, xSpeed)
-            inputTranslationMag = math.hypot(xSpeed, ySpeed)
-
-            # Calculate the direction slew rate based on an estimate of the lateral acceleration
-            if self.currentTranslationMag != 0.0:
-                directionSlewRate = abs(
-                    DrivingConstants.kDirectionSlewRate / self.currentTranslationMag
-                )
-            else:
-                directionSlewRate = 500.0
-                # some high number that means the slew rate is effectively instantaneous
-
-            currentTime = wpilib.Timer.getFPGATimestamp()
-            elapsedTime = currentTime - self.prevTime
-            angleDif = swerveutils.angleDifference(
-                inputTranslationDir, self.currentTranslationDir
-            )
-            if angleDif < 0.45 * math.pi:
-                self.currentTranslationDir = swerveutils.stepTowardsCircular(
-                    self.currentTranslationDir,
-                    inputTranslationDir,
-                    directionSlewRate * elapsedTime,
-                )
-                self.currentTranslationMag = self.magLimiter.calculate(
-                    inputTranslationMag
-                )
-
-            elif angleDif > 0.85 * math.pi:
-                # some small number to avoid floating-point errors with equality checking
-                # keep currentTranslationDir unchanged
-                if self.currentTranslationMag > 1e-4:
-                    self.currentTranslationMag = self.magLimiter.calculate(0.0)
-                else:
-                    self.currentTranslationDir = swerveutils.wrapAngle(
-                        self.currentTranslationDir + math.pi
-                    )
-                    self.currentTranslationMag = self.magLimiter.calculate(
-                        inputTranslationMag
-                    )
-
-            else:
-                self.currentTranslationDir = swerveutils.stepTowardsCircular(
-                    self.currentTranslationDir,
-                    inputTranslationDir,
-                    directionSlewRate * elapsedTime,
-                )
-                self.currentTranslationMag = self.magLimiter.calculate(0.0)
-
-            self.prevTime = currentTime
-
-            xSpeedCommanded = self.currentTranslationMag * math.cos(
-                self.currentTranslationDir
-            )
-            ySpeedCommanded = self.currentTranslationMag * math.sin(
-                self.currentTranslationDir
-            )
-            self.currentRotation = self.rotLimiter.calculate(rot)
-
-        else:
-            self.currentRotation = rot
-
         # Convert the commanded speeds into the correct units for the drivetrain
-        xSpeedDelivered = xSpeedCommanded * DrivingConstants.kMaxMetersPerSecond
-        ySpeedDelivered = ySpeedCommanded * DrivingConstants.kMaxMetersPerSecond
-        rotDelivered = self.currentRotation * DrivingConstants.kMaxAngularSpeed
+        xSpeedGoal = xSpeedCommanded * DrivingConstants.kMaxMetersPerSecond
+        ySpeedGoal = ySpeedCommanded * DrivingConstants.kMaxMetersPerSecond
+        rotSpeedGoal = rot * DrivingConstants.kMaxAngularSpeed
 
-
-        SmartDashboard.putNumber("drivetrain/directionGoal", self.currentTranslationDir)
-        SmartDashboard.putNumber("drivetrain/speedGoal", self.currentTranslationMag)
-        SmartDashboard.putNumber("drivetrain/rotGoal", self.currentRotation)
-        SmartDashboard.putNumber("drivetrain/xSpeedGoal", xSpeedDelivered)
-        SmartDashboard.putNumber("drivetrain/ySpeedGoal", ySpeedDelivered)
-        SmartDashboard.putNumber("drivetrain/rateLimit", int(rateLimit))
-
-
-        SmartDashboard.putBoolean(
-            "Pure Rotation Mode",
-            abs(xSpeedDelivered) < 0.01 and abs(ySpeedDelivered) < 0.01 and abs(rotDelivered) > 0.1
-        )
-
-        swerveModuleStates = DrivingConstants.kDriveKinematics.toSwerveModuleStates(
-            ChassisSpeeds.fromFieldRelativeSpeeds(
-                xSpeedDelivered,
-                ySpeedDelivered,
-                rotDelivered,
-                self.getGyroHeading(),
+        # field relative conversion must happen before rate limiting, since rate limiting is optional
+        if fieldRelative:
+            targetChassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                xSpeedGoal, ySpeedGoal, rotSpeedGoal, self.getGyroHeading(),
             )
-            if fieldRelative
-            else ChassisSpeeds(xSpeedDelivered, ySpeedDelivered, rotDelivered)
-        )
+        else:
+            targetChassisSpeeds = ChassisSpeeds(xSpeedGoal, ySpeedGoal, rotSpeedGoal)
 
-        if abs(xSpeedDelivered) < 0.01 and abs(ySpeedDelivered) < 0.01 and abs(rotDelivered) > 0.1:
-            SmartDashboard.putNumber(
-                "FL Expected (deg)",
-                swerveModuleStates[0].angle.degrees()
-            )
-            SmartDashboard.putNumber(
-                "FR Expected (deg)",
-                swerveModuleStates[1].angle.degrees()
-            )
+        # rate limiting has to be applied this way, to keep the rate limiters current (with time)
+        slewedX = self.xSpeedLimiter.calculate(targetChassisSpeeds.vx)
+        slewedY = self.ySpeedLimiter.calculate(targetChassisSpeeds.vy)
+        slewedRot = self.rotLimiter.calculate(targetChassisSpeeds.omega)
+        if rateLimit:
+            targetChassisSpeeds.vx, targetChassisSpeeds.vy, targetChassisSpeeds.omega = slewedX, slewedY, slewedRot
 
+        # debug these chassis speed targets, if needed
+        SmartDashboard.putNumber("drivetrain/xSpeedTarget", targetChassisSpeeds.vx)
+        SmartDashboard.putNumber("drivetrain/ySpeedTarget", targetChassisSpeeds.vy)
+        SmartDashboard.putNumber("drivetrain/rotSpeedTarget", targetChassisSpeeds.omega)
+
+        # from chassis speed targets, calculate and set the wheel speeds targets
+        swerveModuleStates = DrivingConstants.kDriveKinematics.toSwerveModuleStates(targetChassisSpeeds)
         fl, fr, rl, rr = SwerveDrive4Kinematics.desaturateWheelSpeeds(
             swerveModuleStates, DrivingConstants.kMaxMetersPerSecond
         )
@@ -444,6 +362,7 @@ class DriveSubsystem(Subsystem):
         self.frontRight.setDesiredState(fr)
         self.backLeft.setDesiredState(rl)
         self.backRight.setDesiredState(rr)
+
 
     def driveRobotRelativeChassisSpeeds(self, speeds: ChassisSpeeds) -> None:
         states = DrivingConstants.kDriveKinematics.toSwerveModuleStates(speeds)
@@ -457,6 +376,7 @@ class DriveSubsystem(Subsystem):
 
         SmartDashboard.putNumber("Auto vx", speeds.vx)
         SmartDashboard.putNumber("Auto omega", speeds.omega)
+
 
     def setX(self) -> None:
         """Sets the wheels into an X formation to prevent movement."""
