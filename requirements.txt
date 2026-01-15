@@ -1,7 +1,2 @@
 robotpy
-robotpy-commands-v2
-robotpy-navx
-wpilib
-phoenix6
-pyfrc
-robotpy-pathplannerlib
+certifi
