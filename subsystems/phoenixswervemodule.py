@@ -13,7 +13,7 @@ from constants import ModuleConstants
 
 
 DEBUG_FUSED_ANGLE = True
-DEBUG_TARGET_ANGLE = False
+DEBUG_TARGET_ANGLE = True
 
 class PhoenixSwerveModule(Subsystem):
     def __init__(
@@ -235,6 +235,12 @@ class PhoenixSwerveModule(Subsystem):
             SmartDashboard.putNumber(f"swerveAngle_{self.modulePlace}/total_with_offset", steering_goal)
             denominator = desiredState.speed if desiredState.speed != 0 else 999999
             SmartDashboard.putNumber(f"swerveAngle_{self.modulePlace}/zflip", optimized.speed / denominator)
+
+            actual_with_offset = self.turningMotor.get_position().value / ModuleConstants.kTurningMotorReduction
+            actual = self.steerFusedAngle.to_absolute_rotations(actual_with_offset)
+            SmartDashboard.putNumber(f"swerveAngle_{self.modulePlace}/zzactual_with_offset", actual_with_offset)
+            SmartDashboard.putNumber(f"swerveAngle_{self.modulePlace}/zzactual_wno_offset", actual)
+
 
         self.turningMotor.set_control(
             self.position_request.with_position(
