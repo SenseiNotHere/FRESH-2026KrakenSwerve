@@ -1,13 +1,11 @@
 import time
 
 from commands2 import Subsystem
-from phoenix6.configs import TalonFXConfiguration, Slot0Configs
+from phoenix6.configs import TalonFXConfiguration
 from phoenix6.hardware import TalonFX
-from phoenix6.controls import VelocityVoltage
+from phoenix6.controls import DutyCycleOut
 from phoenix6.signals import NeutralModeValue, InvertedValue
 from wpilib import SmartDashboard, SendableChooser
-
-from constants import ShooterConstants
 
 
 class Shooter(Subsystem):
@@ -26,20 +24,16 @@ class Shooter(Subsystem):
         )
         self.motor.configurator.apply(motorConfig)
 
-        # Slot 0 PID + FF
-        slot0 = Slot0Configs()
-        (slot0
-            .with_k_p(ShooterConstants.kP)
-            .with_k_d(ShooterConstants.kD)
-            .with_k_v(ShooterConstants.kFF)
-        )
-        self.motor.configurator.apply(slot0)
-
-        # Control Request
-        self.velocityRequest = VelocityVoltage(0).with_slot(0)
+        # Percent Output Control
+        self.percentRequest = DutyCycleOut(0.0)
 
         # State
-        self.velocitySetpointRPM = 0.0
+        self.enabled = False
+        self.outputPercent = 0.0
+
+        # Run-for-time state
+        self.runForTimeActive = False
+        self.runForTimeEndTime = 0.0
 
         # Dashboard Chooser
         self.speedChooser = SendableChooser()
@@ -57,67 +51,49 @@ class Shooter(Subsystem):
 
         SmartDashboard.putData("Shooter Speed", self.speedChooser)
 
-        # Enabled State
-        self.enabled = False
-
-        # Run For Time State
-        self.runForTimeActive = False
-        self.runForTimeEndTime = 0.0
-
     # Periodic
+
     def periodic(self):
+        # Handle timed run
         if self.runForTimeActive and time.time() >= self.runForTimeEndTime:
             self.runForTimeActive = False
-            self.velocitySetpointRPM = 0.0
+            self.outputPercent = 0.0
 
+        # Normal control
         if self.enabled and not self.runForTimeActive:
-            percent = self.speedChooser.getSelected()
-            self.setVelocityRPM(percent * ShooterConstants.kMaxRPM)
+            self.outputPercent = self.speedChooser.getSelected()
         elif not self.enabled and not self.runForTimeActive:
-            self.velocitySetpointRPM = 0.0
+            self.outputPercent = 0.0
 
-        self.velocityRequest = self.velocityRequest.with_velocity(
-            self.velocitySetpointRPM
+        # Apply output
+        self.motor.set_control(
+            self.percentRequest.with_output(self.outputPercent)
         )
-        self.motor.set_control(self.velocityRequest)
 
-        measuredRPM = self.getVelocityRPM()
-
-        SmartDashboard.putNumber("Shooter RPM", measuredRPM)
-        SmartDashboard.putNumber("Shooter Setpoint", self.velocitySetpointRPM)
+        # Telemetry
         SmartDashboard.putNumber(
-            "Shooter Error",
-            self.velocitySetpointRPM - measuredRPM
+            "Shooter Output %",
+            self.outputPercent * 100.0
         )
-
-    # Private API
-
-    def _setVelocityRPM(self, rpm: float):
-        self.velocitySetpointRPM = max(
-            min(rpm, ShooterConstants.kMaxRPM),
-            0.0
+        SmartDashboard.putNumber(
+            "Shooter Velocity (RPS)",
+            self.motor.get_velocity().value
         )
-
-    def _stop(self):
-        self.velocitySetpointRPM = 0.0
-        self.motor.set_control(self.velocityRequest.with_velocity(0.0))
 
     # Public API
-
-    def setVelocityRPM(self, rpm: float):
-        self._setVelocityRPM(rpm)
-
-    def runForTime(self, rpm: float, seconds: float):
-        self._setVelocityRPM(rpm)
-        self.runForTimeActive = True
-        self.runForTimeEndTime = time.time() + seconds
-
-    def getVelocityRPM(self) -> float:
-        return self.motor.get_velocity().value
 
     def enable(self):
         self.enabled = True
 
     def disable(self):
         self.enabled = False
-        self._stop()
+        self.outputPercent = 0.0
+        self.motor.set_control(self.percentRequest.with_output(0.0))
+
+    def setPercent(self, percent: float):
+        self.outputPercent = max(min(percent, 1.0), -1.0)
+
+    def runForTime(self, percent: float, seconds: float):
+        self.outputPercent = max(min(percent, 1.0), -1.0)
+        self.runForTimeActive = True
+        self.runForTimeEndTime = time.time() + seconds

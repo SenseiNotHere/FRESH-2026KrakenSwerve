@@ -108,7 +108,6 @@ class PhoenixSwerveModule(Subsystem):
         # Control requests
         self.velocity_request = VelocityVoltage(0).with_slot(0)
         self.position_request = PositionVoltage(0).with_slot(0)
-        self.turning_request = MotionMagicVoltage(0).with_slot(0)
 
         # Initial alignment
         self.resetEncoders()

@@ -108,7 +108,7 @@ class ModuleConstants:
     kTurningEncoderPositionPIDMaxInput = kTurningEncoderPositionFactor
 
     # Sync / Drift Control
-    kFusedAngleRefreshSeconds = 0.25
+    kFusedAngleRefreshSeconds = 0.02
     kTurningKalmanGain = 0.05
     kTurningDriftDegrees = 10.0
 
@@ -127,9 +127,9 @@ class ModuleConstants:
     kDrivingMaxOutput = 1.0
 
     # Turning PID + FF
-    kTurningP = 3.0
+    kTurningP = 10.0
     kTurningI = 0.0
-    kTurningD = 0.0
+    kTurningD = 0.1
     kTurningS = 0.1
     kTurningV = 2.49
     kTurningA = 0.0
@@ -239,9 +239,9 @@ class ShooterConstants:
 
     # Control Gains (Velocity)
     # Scaled for RPM-based control
-    kFF = 1.4 / 10000
-    kP = 5.0 / 10000
-    kD = 0.0 / 10000
+    kFF = 0.12
+    kP = 0.2
+    kD = 0.0
 
 class IntakeConstants:
     kLeadMotorCANID = 1
