@@ -44,7 +44,7 @@ class DriveTowardsObject(commands2.Command):
                 XboxController.Axis.kRightTrigger, threshold=0.1
             )
 
-            # connect the command to its trigger
+            # connect the command to the condition when it should run
             whenRightTriggerPressed.whileTrue(driveToGamepiece)
 
         ```
