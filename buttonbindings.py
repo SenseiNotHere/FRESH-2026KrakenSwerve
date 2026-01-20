@@ -9,6 +9,7 @@ from commands.reset_XY import ResetXY, ResetSwerveFront
 from commands.followObject import FollowObject
 from commands.approach import ApproachTag
 from commands.limelightComands import SetCameraPipeline
+from commands.drive_torwards_object import SwerveTowardsObject
 
 class ButtonBindings:
     def __init__(self, robot_container):
@@ -83,3 +84,12 @@ class ButtonBindings:
             # Indexer
             xButton.whileTrue(InstantCommand(lambda: self.indexer.enable() if self.shooter.atSpeed() else print("Not ready to index yet")))
             xButton.whenFalse(InstantCommand(lambda: self.indexer.disable()))
+
+            # Swerve to Object
+            yButton = self.driverController.button(XboxController.Button.kY)
+            yButton.whileTrue(
+                SwerveTowardsObject(
+                    self.robotDrive,
+                    speed=lambda: -0.2,
+                    camera=self.limelight
+                ))
