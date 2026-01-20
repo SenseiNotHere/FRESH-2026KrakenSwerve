@@ -12,12 +12,15 @@ class Signal(object):
     status: StatusCode = StatusCode.OK
 
 
+GYRO_OVERSHOOT_FRACTION = 3.5 / 360   # example: if your gyro overshoots by 3.5 degrees on each 360 degree turn
+
+
 class NavxGyro(Subsystem):
     """
     An attempt to extend NavX gyro to take a calibrated correction for overshoot, and work better in simulation.
     Imitates get_yaw/set_yaw interfaces of Pigeon2, so you can easily switch to Pigeon2 from this.
     """
-    def __init__(self, gyroOvershootFraction: float = 0.0) -> None:
+    def __init__(self, gyroOvershootFraction: float = GYRO_OVERSHOOT_FRACTION) -> None:
         """
         :param gyroOvershootFraction: if the gyro overshoots by 3.5 degrees on every full 360, set this to 3.5/360
         """
