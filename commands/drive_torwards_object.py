@@ -197,14 +197,14 @@ class SwerveTowardsObject(commands2.Command):
         """
         # if a 0.2*0.2 meter AprilTag appears to take 1% of the screen on a 1.33-square-radian FOV camera...
         #   angular_area = area / distance^2
-        #   1.0steradian * 0.01 = 0.2 * 0.2 / distance^2
-        #   distance = sqrt(0.2 * 0.2 / (1.0 * 0.01)) = 2.0 meters
-        # ... then it must be 2.0 meters away! (assuming that the camera field-of-view is 1.0 steradian, not 1.15)
+        #   2.0steradian * 0.01 = 0.2 * 0.2 / distance^2
+        #   distance = sqrt(0.2 * 0.2 / (2.0 * 0.01)) = 2.0 meters
+        # ... then it must be 2.0 meters away! (assuming that the camera field-of-view is 2.0 steradian)
         #
         # in other words, we can use this approximate formula for distance (if we have 0.2 * 0.2 meter AprilTag)
         """
-        distance = math.sqrt(self.objectDiameterMeters * self.objectDiameterMeters / (1.15 * 0.01 * objectSizePercent))
-        # note: Arducam w OV9281 is 1.70 steradians, not 1.15
+        distance = math.sqrt(self.objectDiameterMeters * self.objectDiameterMeters / (2.0 * 0.01 * objectSizePercent))
+        # note: Arducam w OV9281 is 1.70 steradians, not 2.0
 
         return distance
 
