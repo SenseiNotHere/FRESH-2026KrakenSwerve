@@ -89,7 +89,7 @@ class ModuleConstants:
     # Gear Ratios / Mechanics
     kDrivingMotorPinionTeeth = 14
     kDrivingMotorReduction = 6.12
-    kTurningMotorReduction = 12.6
+    kTurningMotorReduction = 287 / 11.0  # this is for MK5n (but it would be 260 / 10.0 for MK5i)
 
     kWheelDiameterMeters = 0.0965
     kWheelCircumferenceMeters = kWheelDiameterMeters * math.pi
