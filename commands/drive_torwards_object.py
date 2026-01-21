@@ -195,11 +195,11 @@ class SwerveTowardsObject(commands2.Command):
 
     def calcualteDistanceFromDetectedObject(self, objectSizePercent):
         """
-        # if a 0.2*0.2 meter AprilTag appears to take 1% of the screen on a 1.33-square-radian FOV camera...
+        # if a 0.2*0.2 meter AprilTag appears to take 1% of the screen on a 2.0-square-radian FOV camera...
         #   angular_area = area / distance^2
         #   2.0steradian * 0.01 = 0.2 * 0.2 / distance^2
-        #   distance = sqrt(0.2 * 0.2 / (2.0 * 0.01)) = 2.0 meters
-        # ... then it must be 2.0 meters away! (assuming that the camera field-of-view is 2.0 steradian)
+        #   distance = sqrt(0.2 * 0.2 / (2.0 * 0.01)) ~= 1.4 meters
+        # ... then it must be 1.4 meters away! (assuming that the camera field-of-view is 2.0 steradian)
         #
         # in other words, we can use this approximate formula for distance (if we have 0.2 * 0.2 meter AprilTag)
         """
