@@ -21,13 +21,14 @@ class Indexer(Subsystem):
             if motorInverted
             else InvertedValue.CLOCKWISE_POSITIVE
         )
+        self.motor.configurator.apply(indexerMotorConfig)
 
         # Slot config
         indexerSlotConfig = Slot0Configs()
         indexerSlotConfig.k_p = IndexerConstants.kP
         indexerSlotConfig.k_d = IndexerConstants.kD
         indexerSlotConfig.k_v = IndexerConstants.kFF
-        self.motor.configurator.apply(indexerMotorConfig)
+        self.motor.configurator.apply(indexerSlotConfig)
 
         # Control requests
         self.velocityRequest = VelocityVoltage(0.0).with_slot(0)

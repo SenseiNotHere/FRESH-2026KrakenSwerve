@@ -24,7 +24,6 @@ from subsystems.limelight_localizer import LimelightLocalizer
 from subsystems.shootersubsystem import Shooter
 from subsystems.indexersubsystem import Indexer
 from commands.holonomicDrive import HolonomicDrive
-from commands.approach import ApproachTag
 from buttonbindings import ButtonBindings
 from constants import OIConstants, ShooterConstants
 

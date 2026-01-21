@@ -1,4 +1,5 @@
 from wpilib import XboxController, PS4Controller
+from wpimath.geometry import Pose2d, Rotation2d
 from commands2 import cmd, InstantCommand, RunCommand
 from commands2.button import CommandGenericHID
 from subsystems.drivesubsystem import DriveSubsystem
@@ -7,7 +8,6 @@ from constants import *
 
 from commands.reset_XY import ResetXY, ResetSwerveFront
 from commands.followObject import FollowObject
-from commands.approach import ApproachTag
 from commands.limelightComands import SetCameraPipeline
 from commands.drive_torwards_object import SwerveTowardsObject
 
@@ -47,17 +47,6 @@ class ButtonBindings:
         povLeftDriverButton = self.driverController.pov(270)
         povLeftDriverButton.whileTrue(InstantCommand(self.robotDrive.setX, self.robotDrive))
 
-        # Follow Object
-        yDriverButton = self.driverController.button(XboxController.Button.kY)
-        yDriverButton.whileTrue(
-            ApproachTag(
-                camera=self.limelight,
-                drivetrain=self.robotDrive,
-                dashboardName="ApproachTag",
-                reverse=True
-            )
-        )
-
         # Play selected song
         bButton = self.driverController.button(XboxController.Button.kB)
         bButton.onTrue(InstantCommand(lambda: self.robotDrive.playSound(self.robotContainer.songChooser.getSelected())))
@@ -85,11 +74,15 @@ class ButtonBindings:
             xButton.whileTrue(InstantCommand(lambda: self.indexer.enable() if self.shooter.atSpeed() else print("Not ready to index yet")))
             xButton.whenFalse(InstantCommand(lambda: self.indexer.disable()))
 
-            # Swerve to Object
-            yButton = self.driverController.button(XboxController.Button.kY)
-            yButton.whileTrue(
-                SwerveTowardsObject(
-                    self.robotDrive,
-                    speed=lambda: -0.2,
-                    camera=self.limelight
-                ))
+            # elif statement end
+
+        # Swerve to Object
+        yButton = self.driverController.button(XboxController.Button.kY)
+        yButton.whileTrue(
+            SwerveTowardsObject(
+                self.robotDrive,
+                speed=lambda: -0.2,
+                camera=self.limelight,
+                cameraLocationOnRobot=Pose2d(-0.4, 0, Rotation2d.fromDegrees(180))
+                # ^^ look, adding this fourth argument to specify that the camera is behind the center of the robot and is looking in the rear direction (180 degrees)
+            ))

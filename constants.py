@@ -5,6 +5,8 @@ from wpimath.geometry import Translation2d
 from wpimath.kinematics import SwerveDrive4Kinematics
 from wpimath.trajectory import TrapezoidProfileRadians
 
+from utils.interpolatingMap import InterpolatingMap
+
 from phoenix6.hardware import talon_fx
 from phoenix6.signals import NeutralModeValue
 
@@ -241,6 +243,16 @@ class ShooterConstants:
     kShooterSupplyLimit = 40 # amps
     kShooterStatorLimit = 140 # amps
 
+    # Interpolation Map for Distance to RPM
+
+    DISTANCE_TO_RPS = InterpolatingMap()
+
+    DISTANCE_TO_RPS.insert(1.5, 42.0)
+    DISTANCE_TO_RPS.insert(2.0, 48.0)
+    DISTANCE_TO_RPS.insert(2.5, 54.0)
+    DISTANCE_TO_RPS.insert(3.0, 60.0)
+    DISTANCE_TO_RPS.insert(3.5, 66.0)
+
     # Use shooter?
     kShooterEnabled = False
 
@@ -264,3 +276,19 @@ class IndexerConstants:
     kFeedRPS = 18.0
 
     kIndexerEnabled = False
+
+class ClimberConstants:
+    kClimberMotorID = 1
+
+    # Magnet offset
+    kMagnetOffset = 0.0
+
+    # Control gains
+    kP = 0.0
+    kD = 0.0
+
+    # Position
+    kMinPosition = 0.0
+    kMaxPosition = 0.0
+
+    kClimberEnabled = False
