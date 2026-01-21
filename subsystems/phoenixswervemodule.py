@@ -38,6 +38,7 @@ class PhoenixSwerveModule(Subsystem):
 
         # steering motorRot -> radians
         self.steerFusedAngle = FusedTurningAngle(modulePlace)
+        self.turningPosRotations = 0.0
         self.nextFuseTime = 0.0
 
         self.steerMotorRotToRad = (2 * math.pi) / ModuleConstants.kTurningMotorReduction
@@ -166,10 +167,9 @@ class PhoenixSwerveModule(Subsystem):
         """
         :return: The current turning position of the swerve module in radians.
         """
-        motor_rot = self.steerFusedAngle.to_absolute_rotations(
-            self.turningMotor.get_position().value / ModuleConstants.kTurningMotorReduction
-        )
-        return 2 * math.pi * motor_rot
+        self.turningPosRotations = rel = self.turningMotor.get_position().value / ModuleConstants.kTurningMotorReduction
+        absolute = self.steerFusedAngle.to_absolute_rotations(rel)
+        return 2 * math.pi * absolute
 
     def getState(self) -> SwerveModuleState:
         """
@@ -198,8 +198,11 @@ class PhoenixSwerveModule(Subsystem):
         :param desired: The desired SwerveModuleState.
         :return: The optimized SwerveModuleState.
         """
+
+        # if desired speed is zero, do not bother returning the wheels to the zero angle
         current_angle = Rotation2d(self.getTurningPosition())
-        target_angle = desired.angle
+        x_brake = desired.speed == 0 and abs((desired.angle.degrees() % 90) - 45) < 0.01
+        target_angle = desired.angle if desired.speed != 0 or x_brake else current_angle
         flip = False
 
         delta = target_angle.radians() - current_angle.radians()
@@ -240,7 +243,7 @@ class PhoenixSwerveModule(Subsystem):
 
         # Turn
         steering_goal = self.steerFusedAngle.to_relative_rotations(
-            optimized.angle.radians() / (2 * math.pi)
+            optimized.angle.radians() / (2 * math.pi), self.turningPosRotations
         )
 
         self.turningMotor.set_control(
@@ -302,8 +305,13 @@ class FusedTurningAngle:
         self.relative_minus_absolute = 0.0
         self.not_ready = "no observations"
 
-    def to_relative_rotations(self, absolute_rotations: float) -> float:
-        return absolute_rotations + self.relative_minus_absolute
+    def to_relative_rotations(self, absolute_rotations: float, current_rel_rotations: float) -> float:
+        result = absolute_rotations + self.relative_minus_absolute
+        while result - current_rel_rotations > 0.5:  # unlikely but possible, since absolute angle resets when wrapping
+            result -= 1.0
+        while result - current_rel_rotations < -0.5:
+            result += 1.0
+        return result
 
     def to_absolute_rotations(self, relative_rotations: float) -> float:
         return relative_rotations - self.relative_minus_absolute
