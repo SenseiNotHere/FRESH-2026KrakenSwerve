@@ -1,10 +1,19 @@
 import time
 
 from commands2 import Subsystem
-from phoenix6.configs import TalonFXConfiguration, Slot0Configs
+from phoenix6.configs import (
+    TalonFXConfiguration,
+    Slot0Configs
+)
 from phoenix6.hardware import TalonFX
-from phoenix6.controls import VelocityVoltage, Follower
-from phoenix6.signals import NeutralModeValue, InvertedValue, MotorAlignmentValue
+from phoenix6.controls import (
+    VelocityVoltage,
+    Follower
+)
+from phoenix6.signals import (
+    NeutralModeValue,
+    InvertedValue,
+    MotorAlignmentValue)
 from wpilib import SmartDashboard
 
 from constants import IntakeConstants
@@ -110,6 +119,14 @@ class Intake(Subsystem):
 
     def getRPM(self) -> float:
         return self.leadMotor.get_velocity().value * 60.0
+
+    def getMotor(self):
+        """
+        :yields: The Talon FX controlling the climber motor.
+        """
+        yield self.leadMotor
+        if self.followMotor:
+            yield self.followMotor
 
     # Helpers
     @staticmethod

@@ -5,6 +5,7 @@
 #
 
 from __future__ import annotations
+from typing import Callable
 
 import commands2
 
@@ -40,7 +41,12 @@ class PointTowardsLocation(commands2.Command):
         ```
     """
 
-    def __init__(self, drivetrain: DriveSubsystem, location: Translation2d, locationIfRed: Translation2d):
+    def __init__(
+            self,
+            drivetrain: DriveSubsystem,
+            location: Translation2d | Callable[[], Translation2d | None],
+            locationIfRed: Translation2d | Callable[[], Translation2d | None]
+    ):
         super().__init__()
         self.location, self.locationIfRed = location, locationIfRed
         self.drivetrain = drivetrain  # not calling addRequirement, on purpose
@@ -59,6 +65,16 @@ class PointTowardsLocation(commands2.Command):
             self.activeTargetLocation = self.location
             SmartDashboard.putString("command/c" + self.__class__.__name__, "assuming blue or unknown alliance")
 
+        raw = (
+            self.locationIfRed
+            if DriverStation.getAlliance() == DriverStation.Alliance.kRed
+            else self.location
+        )
+
+        self.activeTargetLocation = self._resolve(raw)
+
+        if self.activeTargetLocation is None:
+            return
 
     def execute(self):
         # heading override already in place?
@@ -81,3 +97,6 @@ class PointTowardsLocation(commands2.Command):
 
     def isFinished(self) -> bool:
         return False  # never finish, wait for user to stop this command
+
+    def _resolve(self, value):
+        return value() if callable(value) else value

@@ -7,14 +7,22 @@ import wpilib
 
 from commands2 import Subsystem
 from wpimath.filter import SlewRateLimiter
-from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+from wpimath.geometry import (
+    Pose2d,
+    Rotation2d,
+    Translation2d
+)
 from wpimath.kinematics import (
     ChassisSpeeds,
     SwerveModuleState,
     SwerveDrive4Kinematics,
     SwerveDrive4Odometry,
 )
-from wpilib import SmartDashboard, Field2d, DriverStation
+from wpilib import (
+    SmartDashboard,
+    Field2d,
+    DriverStation
+)
 
 from commands.aimToDirection import AimToDirectionConstants
 from .phoenixswervemodule import PhoenixSwerveModule
@@ -26,7 +34,11 @@ from pathplannerlib.config import RobotConfig, PIDConstants
 
 from phoenix6.orchestra import Orchestra
 
-from constants import DrivingConstants, ModuleConstants, AutoConstants
+from constants import (
+    DrivingConstants,
+    ModuleConstants,
+    AutoConstants
+)
 from commands.holonomicDrive import HolonomicDrive
 
 import commands2
@@ -143,18 +155,6 @@ class DriveSubsystem(Subsystem):
             self.shouldFlipPath,  # Alliance-based flipping
             self  # Subsystem requirement
         )
-
-        # Initialize Orchestra for playing music through all motors
-        self.orchestra = Orchestra([
-            self.frontLeft.drivingMotor,
-            self.frontLeft.turningMotor,
-            self.frontRight.drivingMotor,
-            self.frontRight.turningMotor,
-            self.backLeft.drivingMotor,
-            self.backLeft.turningMotor,
-            self.backRight.drivingMotor,
-            self.backRight.turningMotor,
-        ])
 
     def getRobotRelativeSpeeds(self) -> ChassisSpeeds:
         """Returns the current robot-relative ChassisSpeeds"""
@@ -457,21 +457,17 @@ class DriveSubsystem(Subsystem):
         """
         return self.getTurnRate() * 180 / math.pi
 
-    def playSound(self, path: str = "/home/lvuser/py/deploy/files/Bloodline.chrp"):
+    def getMotors(self):
         """
-        Play music through the swerve drive motors using Phoenix Orchestra.
-        All 8 motors (4 drive + 4 turn) will play together for maximum volume.
-        :param path: Path to the .chrp music file on the RoboRIO
+        :yields: The motors controlled by the swerve modules.
         """
-        print(f"Loading and playing music: {path}")
-        self.orchestra.load_music(path)
-        self.orchestra.play()
-
-    def stopSound(self):
-        """
-        Stop playing music through the motors.
-        """
-        self.orchestra.stop()
+        for module in (
+            self.frontLeft,
+            self.frontRight,
+            self.backLeft,
+            self.backRight,
+        ):
+            yield from module.getMotors()
 
 
     def startOverrideToFaceThisPoint(self, point: Translation2d) -> bool:

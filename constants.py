@@ -244,9 +244,7 @@ class ShooterConstants:
     kShooterStatorLimit = 140 # amps
 
     # Interpolation Map for Distance to RPM
-
     DISTANCE_TO_RPS = InterpolatingMap()
-
     DISTANCE_TO_RPS.insert(1.5, 42.0)
     DISTANCE_TO_RPS.insert(2.0, 48.0)
     DISTANCE_TO_RPS.insert(2.5, 54.0)

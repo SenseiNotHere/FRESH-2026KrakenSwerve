@@ -21,7 +21,7 @@ class Constants:
     kDetectionTimeoutSeconds = 1.0  # if detection lost for this many seconds, done
 
     # for the swerve command:
-    kPTranslate = 0.125 / (KrakenX60.kMaxSpeedMetersPerSecond / 4.7)
+    kPTranslate = 0.02 / (KrakenX60.kMaxSpeedMetersPerSecond / 4.7)
     kMinLateralSpeed = 0.025  # driving slower than this is unproductive (motor might not even spin)
 
     # for the tank command:

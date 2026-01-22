@@ -1,18 +1,34 @@
 import math
+
 from commands2 import Subsystem
-from phoenix6.hardware import TalonFX, CANcoder
-from phoenix6.configs import TalonFXConfiguration, CANcoderConfiguration, CurrentLimitsConfigs, Slot0Configs
-from phoenix6.signals import NeutralModeValue, InvertedValue, SensorDirectionValue
-from phoenix6.controls import VelocityVoltage, PositionVoltage, MotionMagicVoltage
-from phoenix6.orchestra import Orchestra
-from wpilib import Timer, DriverStation, SmartDashboard
+from wpilib import Timer, SmartDashboard
 from wpimath.geometry import Rotation2d
 from wpimath.kinematics import SwerveModuleState, SwerveModulePosition
+
+from phoenix6.hardware import TalonFX, CANcoder
+from phoenix6.configs import (
+    TalonFXConfiguration,
+    CANcoderConfiguration,
+    CurrentLimitsConfigs,
+    Slot0Configs,
+)
+from phoenix6.signals import (
+    NeutralModeValue,
+    InvertedValue,
+    SensorDirectionValue,
+)
+from phoenix6.controls import VelocityVoltage, PositionVoltage
+from phoenix6.orchestra import Orchestra
 
 from constants import ModuleConstants
 
 
 class PhoenixSwerveModule(Subsystem):
+    """
+    Represents a single swerve module using Phoenix 6.
+    Handles drive, steering, encoder fusion, and control.
+    """
+
     def __init__(
         self,
         drivingCANId: int,
@@ -26,33 +42,34 @@ class PhoenixSwerveModule(Subsystem):
     ) -> None:
         super().__init__()
 
-        self.desiredState = SwerveModuleState(0.0, Rotation2d())
+        # Identity / State
         self.modulePlace = modulePlace
+        self.desiredState = SwerveModuleState(0.0, Rotation2d())
 
-        # driving motorRot -> wheelMeters
+        # Conversion Factors
         self.driveMotorRotToMeters = (
             ModuleConstants.kWheelCircumferenceMeters
             / ModuleConstants.kDrivingMotorReduction
         )
         self.driveMotorRpsToMps = self.driveMotorRotToMeters
 
-        # steering motorRot -> radians
-        self.steerFusedAngle = FusedTurningAngle(modulePlace)
-        self.turningPosRotations = 0.0
-        self.nextFuseTime = 0.0
-
-        self.steerMotorRotToRad = (2 * math.pi) / ModuleConstants.kTurningMotorReduction
+        self.steerMotorRotToRad = (
+            2 * math.pi / ModuleConstants.kTurningMotorReduction
+        )
         self.radToSteerMotorRot = 1.0 / self.steerMotorRotToRad
+
+        # Encoder Fusion
+        self.steerFusedAngle = FusedTurningAngle(modulePlace)
+        self.nextFuseTime = 0.0
 
         # Hardware
         self.drivingMotor = TalonFX(drivingCANId)
         self.turningMotor = TalonFX(turningCANId)
         self.canCoder = CANcoder(canCoderCANId)
-        self.canCoderOffset = canCoderOffset
 
-        # CANcoder config
+        # CANcoder Config
         canCoderConfig = CANcoderConfiguration()
-        canCoderConfig.magnet_sensor.magnet_offset = self.canCoderOffset
+        canCoderConfig.magnet_sensor.magnet_offset = canCoderOffset
         canCoderConfig.magnet_sensor.sensor_direction = (
             SensorDirectionValue.CLOCKWISE_POSITIVE
             if canCoderInverted
@@ -60,102 +77,97 @@ class PhoenixSwerveModule(Subsystem):
         )
         self.canCoder.configurator.apply(canCoderConfig)
 
-        # Drive motor config
-        drivingConfig = TalonFXConfiguration()
-        drivingConfig.motor_output.neutral_mode = NeutralModeValue.BRAKE
-        drivingConfig.motor_output.inverted = (
+        # Drive Motor Config
+        driveConfig = TalonFXConfiguration()
+        driveConfig.motor_output.neutral_mode = NeutralModeValue.BRAKE
+        driveConfig.motor_output.inverted = (
             InvertedValue.CLOCKWISE_POSITIVE
             if driveMotorInverted
             else InvertedValue.COUNTER_CLOCKWISE_POSITIVE
         )
-        self.drivingMotor.configurator.apply(drivingConfig)
+        self.drivingMotor.configurator.apply(driveConfig)
 
-        # Driving Gain Configs
-        drivingSlotConfig = Slot0Configs()
-        (drivingSlotConfig
-         .with_k_p(ModuleConstants.kDrivingP)
-         .with_k_i(ModuleConstants.kDrivingI)
-         .with_k_d(ModuleConstants.kDrivingD)
-         .with_k_s(ModuleConstants.kDrivingS)
-         .with_k_v(ModuleConstants.kDrivingV)
+        driveSlot = Slot0Configs()
+        (
+            driveSlot
+            .with_k_p(ModuleConstants.kDrivingP)
+            .with_k_i(ModuleConstants.kDrivingI)
+            .with_k_d(ModuleConstants.kDrivingD)
+            .with_k_s(ModuleConstants.kDrivingS)
+            .with_k_v(ModuleConstants.kDrivingV)
         )
-        self.drivingMotor.configurator.apply(drivingSlotConfig)
+        self.drivingMotor.configurator.apply(driveSlot)
 
-        # Turn motor config
-        turningConfig = TalonFXConfiguration()
-        turningConfig.motor_output.neutral_mode = NeutralModeValue.BRAKE
-        turningConfig.motor_output.inverted = (
+        # Turn Motor Config
+        turnConfig = TalonFXConfiguration()
+        turnConfig.motor_output.neutral_mode = NeutralModeValue.BRAKE
+        turnConfig.motor_output.inverted = (
             InvertedValue.CLOCKWISE_POSITIVE
             if turnMotorInverted
             else InvertedValue.COUNTER_CLOCKWISE_POSITIVE
         )
-        self.turningMotor.configurator.apply(turningConfig)
+        self.turningMotor.configurator.apply(turnConfig)
 
-        # Turning slot config
-        turningSlotConfig = Slot0Configs()
-        (turningSlotConfig
-         .with_k_p(ModuleConstants.kTurningP)
-         .with_k_i(ModuleConstants.kTurningI)
-         .with_k_d(ModuleConstants.kTurningD)
-         .with_k_s(ModuleConstants.kTurningS)
-         .with_k_v(ModuleConstants.kTurningV)
-         .with_k_a(ModuleConstants.kTurningA)
+        turnSlot = Slot0Configs()
+        (
+            turnSlot
+            .with_k_p(ModuleConstants.kTurningP)
+            .with_k_i(ModuleConstants.kTurningI)
+            .with_k_d(ModuleConstants.kTurningD)
+            .with_k_s(ModuleConstants.kTurningS)
+            .with_k_v(ModuleConstants.kTurningV)
+            .with_k_a(ModuleConstants.kTurningA)
         )
-        self.turningMotor.configurator.apply(turningSlotConfig)
+        self.turningMotor.configurator.apply(turnSlot)
 
-        # Current limits
-        # Driving Current Limits
-        drivingCurrentLimits = CurrentLimitsConfigs()
-        (drivingCurrentLimits
-         .with_supply_current_limit(ModuleConstants.kDrivingMotorCurrentLimit)
-         .with_stator_current_limit(ModuleConstants.kDrivingMotorStatorCurrentLimit)
-         .with_supply_current_limit_enable(True)
-         .with_stator_current_limit_enable(True)
+        # Current Limits
+        driveLimits = CurrentLimitsConfigs()
+        (
+            driveLimits
+            .with_supply_current_limit(ModuleConstants.kDrivingMotorCurrentLimit)
+            .with_stator_current_limit(ModuleConstants.kDrivingMotorStatorCurrentLimit)
+            .with_supply_current_limit_enable(True)
+            .with_stator_current_limit_enable(True)
         )
-        self.drivingMotor.configurator.apply(drivingCurrentLimits)
+        self.drivingMotor.configurator.apply(driveLimits)
 
-        # Turning Current Limits
-        turningCurrentLimits = CurrentLimitsConfigs()
-        (turningCurrentLimits
-         .with_supply_current_limit(ModuleConstants.kTurningMotorCurrentLimit)
-         .with_stator_current_limit(ModuleConstants.kTurningStatorCurrentLimit)
-         .with_supply_current_limit_enable(True)
-         .with_stator_current_limit_enable(True)
+        turnLimits = CurrentLimitsConfigs()
+        (
+            turnLimits
+            .with_supply_current_limit(ModuleConstants.kTurningMotorCurrentLimit)
+            .with_stator_current_limit(ModuleConstants.kTurningStatorCurrentLimit)
+            .with_supply_current_limit_enable(True)
+            .with_stator_current_limit_enable(True)
         )
-        self.turningMotor.configurator.apply(turningCurrentLimits)
+        self.turningMotor.configurator.apply(turnLimits)
 
-        # Control requests
-        self.velocity_request = VelocityVoltage(0).with_slot(0)
-        self.position_request = PositionVoltage(0).with_slot(0)
+        # Control Requests
+        self.velocityRequest = VelocityVoltage(0).with_slot(0)
+        self.positionRequest = PositionVoltage(0).with_slot(0)
 
-        # Initial alignment
+        # Init State
         self.resetEncoders()
-
-        # Orchestra stuff
         self.orchestra = Orchestra([self.drivingMotor, self.turningMotor])
 
-    # Encoder Sync
-
-    def resetEncoders(self) -> None:
-        """
-        Resets the driving motor encoder to zero
-        """
-        self.drivingMotor.set_position(0)
-
+    # Periodic / Encoder Fusion
 
     def periodic(self) -> None:
         now = Timer.getFPGATimestamp()
         if now < self.nextFuseTime:
             return
-        self.nextFuseTime = now + ModuleConstants.kFusedAngleRefreshSeconds
 
-        relative, absolute = self.turningMotor.get_position(), self.canCoder.get_absolute_position()
+        self.nextFuseTime = (
+            now + ModuleConstants.kFusedAngleRefreshSeconds
+        )
+
+        relative = self.turningMotor.get_position()
+        absolute = self.canCoder.get_absolute_position()
+
         if absolute.status.is_ok() and relative.status.is_ok():
             self.steerFusedAngle.observe(
                 absolute.value,
-                relative.value / ModuleConstants.kTurningMotorReduction
+                relative.value / ModuleConstants.kTurningMotorReduction,
             )
-
         elif not absolute.status.is_ok():
             self.steerFusedAngle.complain("absolute encoder unavailable")
         elif not relative.status.is_ok():
@@ -163,51 +175,64 @@ class PhoenixSwerveModule(Subsystem):
 
     # State / Odometry
 
+    def resetEncoders(self) -> None:
+        self.drivingMotor.set_position(0)
+
     def getTurningPosition(self) -> float:
-        """
-        :return: The current turning position of the swerve module in radians.
-        """
-        self.turningPosRotations = rel = self.turningMotor.get_position().value / ModuleConstants.kTurningMotorReduction
-        absolute = self.steerFusedAngle.to_absolute_rotations(rel)
-        return 2 * math.pi * absolute
+        motorRot = self.steerFusedAngle.to_absolute_rotations(
+            self.turningMotor.get_position().value
+            / ModuleConstants.kTurningMotorReduction
+        )
+        return 2 * math.pi * motorRot
 
     def getState(self) -> SwerveModuleState:
-        """
-        :return: The current state of the swerve module.
-        """
-        motor_rps = self.drivingMotor.get_velocity().value
-        wheel_mps = motor_rps * self.driveMotorRpsToMps
-        angle = self.getTurningPosition()
-        return SwerveModuleState(wheel_mps, Rotation2d(angle))
+        speed = (
+            self.drivingMotor.get_velocity().value
+            * self.driveMotorRpsToMps
+        )
+        return SwerveModuleState(
+            speed,
+            Rotation2d(self.getTurningPosition()),
+        )
 
     def getPosition(self) -> SwerveModulePosition:
-        """
-        :return: The current position of the swerve module.
-        """
-        motor_rot = self.drivingMotor.get_position().value
-        wheel_meters = motor_rot * self.driveMotorRotToMeters
-        angle = self.getTurningPosition()
-        return SwerveModulePosition(wheel_meters, Rotation2d(angle))
+        distance = (
+            self.drivingMotor.get_position().value
+            * self.driveMotorRotToMeters
+        )
+        return SwerveModulePosition(
+            distance,
+            Rotation2d(self.getTurningPosition()),
+        )
 
-    # Optimize
+    # Control
 
-    def _optimizeState(self, desired: SwerveModuleState) -> SwerveModuleState:
-        """
-        Optimize the desired state to minimize rotation.
+    def setDesiredState(self, desired: SwerveModuleState) -> None:
+        optimized = self._optimizeState(desired)
 
-        :param desired: The desired SwerveModuleState.
-        :return: The optimized SwerveModuleState.
-        """
+        driveRps = optimized.speed / self.driveMotorRotToMeters
+        self.drivingMotor.set_control(
+            self.velocityRequest.with_velocity(driveRps)
+        )
 
-        # if desired speed is zero, do not bother returning the wheels to the zero angle
-        current_angle = Rotation2d(self.getTurningPosition())
-        x_brake = desired.speed == 0 and abs((desired.angle.degrees() % 90) - 45) < 0.01
-        target_angle = desired.angle if desired.speed != 0 or x_brake else current_angle
+        steerRot = self.steerFusedAngle.to_relative_rotations(
+            optimized.angle.radians() / (2 * math.pi)
+        )
+        self.turningMotor.set_control(
+            self.positionRequest.with_position(
+                steerRot * ModuleConstants.kTurningMotorReduction
+            )
+        )
+
+        self.desiredState = desired
+
+    def _optimizeState(
+        self, desired: SwerveModuleState
+    ) -> SwerveModuleState:
+        current = Rotation2d(self.getTurningPosition())
+        delta = desired.angle.radians() - current.radians()
         flip = False
 
-        delta = target_angle.radians() - current_angle.radians()
-
-        # this loop can be optimized, but let's first make sure it works
         while delta > math.pi / 2:
             delta -= math.pi
             flip = not flip
@@ -215,129 +240,98 @@ class PhoenixSwerveModule(Subsystem):
             delta += math.pi
             flip = not flip
 
-        optimized_angle = Rotation2d(current_angle.radians() + delta)
-        optimized_speed = -desired.speed if flip else desired.speed
-        return SwerveModuleState(optimized_speed, optimized_angle)
-
-    # Control
-
-    def setDesiredState(self, desiredState: SwerveModuleState) -> None:
-        """
-        Sets the desired state for the swerve module.
-
-        :param desiredState: The desired state to set.
-        :type desiredState: SwerveModuleState
-        """
-        desired_module = SwerveModuleState(
-            desiredState.speed,
-            desiredState.angle,
+        return SwerveModuleState(
+            -desired.speed if flip else desired.speed,
+            Rotation2d(current.radians() + delta),
         )
 
-        optimized = self._optimizeState(desired_module)
-
-        # Drive
-        motor_rps = optimized.speed / self.driveMotorRotToMeters
-        self.drivingMotor.set_control(
-            self.velocity_request.with_velocity(motor_rps)
-        )
-
-        # Turn
-        steering_goal = self.steerFusedAngle.to_relative_rotations(
-            optimized.angle.radians() / (2 * math.pi), self.turningPosRotations
-        )
-
-        self.turningMotor.set_control(
-            self.position_request.with_position(
-                steering_goal * ModuleConstants.kTurningMotorReduction
-            )
-        )
-
-        self.desiredState = desiredState
-
-    # Extras
+    # Telemetry / Extras
 
     def getTemperature(self):
         """
-        :return: Returns the temperatures of the module's motors.
+        :returns: A tuple of (driving, turning) motor temperatures in Celsius.
         """
-        drivingTemp = self.drivingMotor.get_device_temp().value
-        turningTemp = self.turningMotor.get_device_temp().value
-        return drivingTemp, turningTemp
+        return (
+            self.drivingMotor.get_device_temp().value,
+            self.turningMotor.get_device_temp().value,
+        )
 
     def getSupplyCurrent(self):
         """
-        :return: Returns the current draw of the module's motors.
+        :returns: A tuple of (driving, turning) motor supply currents in amps.
         """
-        drivingCurrent = self.drivingMotor.get_supply_current()
-        turningCurrent = self.turningMotor.get_supply_current()
-        return drivingCurrent, turningCurrent
-
-    # Orchestra
+        return (
+            self.drivingMotor.get_supply_current(),
+            self.turningMotor.get_supply_current(),
+        )
 
     def loadMusic(self, path: str):
         """
-        Loads a music file into the orchestra.
-
-        :path: (str): The file path to the music file to be loaded.
+        Loads a music file to the motors.
         """
         self.orchestra.load_music(path)
 
     def playMusic(self):
         """
-        Plays music using the configured orchestra.
+        Plays the loaded music through the motors.
         """
         self.orchestra.play()
 
     def stopMusic(self):
         """
-        Stops the music playback by halting the orchestra.
+        Stops playing the currently playing music through the motors.
         """
         self.orchestra.stop()
 
+    def getMotors(self):
+        """
+        :yields: The TalonFXs driving and turning the swerve module.
+        """
+        yield self.drivingMotor
+        yield self.turningMotor
+
+# Support Classes
 
 class FusedTurningAngle:
     """
-    Converts the absolute rotations of the relative encoder into absolute rotations of absolute, and vice versa.
-    (by observing the values these angles take)
+    Fuses relative and absolute encoders to maintain a
+    continuous, absolute steering angle.
     """
+
     def __init__(self, place: str):
         self.place = place
         self.relative_minus_absolute = 0.0
         self.not_ready = "no observations"
 
-    def to_relative_rotations(self, absolute_rotations: float, current_rel_rotations: float) -> float:
-        result = absolute_rotations + self.relative_minus_absolute
-        while result - current_rel_rotations > 0.5:  # unlikely but possible, since absolute angle resets when wrapping
-            result -= 1.0
-        while result - current_rel_rotations < -0.5:
-            result += 1.0
-        return result
+    def to_relative_rotations(self, absolute: float) -> float:
+        return absolute + self.relative_minus_absolute
 
-    def to_absolute_rotations(self, relative_rotations: float) -> float:
-        return relative_rotations - self.relative_minus_absolute
+    def to_absolute_rotations(self, relative: float) -> float:
+        return relative - self.relative_minus_absolute
 
-    def observe(self, absolute_rotations: float, relative_rotations: float) -> None:
-        """
-        Makes an observation of the distance between absolute and relative rotation sensors.
-
-        :absolute_rotations: (float): the reading of absolute encoder (in rotations)
-        :relative_rotations: (float): the reading of relative encoder (in rotations)
-        """
+    def observe(self, absolute: float, relative: float) -> None:
         if self.not_ready:
-            self.relative_minus_absolute = relative_rotations - absolute_rotations
+            self.relative_minus_absolute = relative - absolute
             self.complain("")
             return
 
-        observation = relative_rotations - absolute_rotations
+        observation = relative - absolute
         while observation - self.relative_minus_absolute > 0.5:
-            observation -= 1.0  # wrap around
+            observation -= 1.0
         while observation - self.relative_minus_absolute < -0.5:
-            observation += 1.0  # wrap around
+            observation += 1.0
+
         if ModuleConstants.kTurningKalmanGain > 0:
-            correction = ModuleConstants.kTurningKalmanGain * (observation - self.relative_minus_absolute)
+            correction = (
+                ModuleConstants.kTurningKalmanGain
+                * (observation - self.relative_minus_absolute)
+            )
             self.relative_minus_absolute += correction
 
-    def complain(self, reason):
+    def complain(self, reason: str):
         if reason != self.not_ready:
-            SmartDashboard.putString(f"fusedAngle_{self.place}/not_ready", reason)
+            SmartDashboard.putString(
+                f"fusedAngle_{self.place}/not_ready",
+                reason,
+            )
             self.not_ready = reason

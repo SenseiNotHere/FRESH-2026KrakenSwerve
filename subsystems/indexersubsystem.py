@@ -1,8 +1,17 @@
 from commands2 import Subsystem
-from phoenix6.configs import TalonFXConfiguration, Slot0Configs
+from phoenix6.configs import (
+    TalonFXConfiguration,
+    Slot0Configs
+)
 from phoenix6.hardware import TalonFX
-from phoenix6.controls import VelocityVoltage, DutyCycleOut
-from phoenix6.signals import NeutralModeValue, InvertedValue
+from phoenix6.controls import (
+    VelocityVoltage,
+    DutyCycleOut
+)
+from phoenix6.signals import (
+    NeutralModeValue,
+    InvertedValue
+)
 
 from constants import IndexerConstants
 
@@ -62,6 +71,7 @@ class Indexer(Subsystem):
         """
         self.enabled = False
         self.targetRPS = 0.0
+        self.motor.set_control(self.percentRequest.with_output(0.0))
 
     def feedPercent(self, percent: float):
         """
@@ -71,3 +81,9 @@ class Indexer(Subsystem):
         self.motor.set_control(
             self.percentRequest.with_output(percent)
         )
+
+    def getMotor(self):
+        """
+        :yields: The Talon FX controlling the climber motor.
+        """
+        yield self.motor

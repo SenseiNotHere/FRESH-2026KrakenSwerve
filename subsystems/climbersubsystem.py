@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from commands2 import Subsystem
-from phoenix6.configs import TalonFXConfiguration, CANcoderConfiguration, Slot0Configs
+from phoenix6.configs import (
+    TalonFXConfiguration,
+    CANcoderConfiguration,
+    Slot0Configs
+)
 from phoenix6.hardware import TalonFX, CANcoder
 from phoenix6.controls import PositionVoltage
 from phoenix6.signals import (
@@ -144,3 +148,11 @@ class Climber(Subsystem):
         """
         absPosition = self.getAbsolutePosition()
         self.motor.set_position(absPosition)
+
+    # Extras
+
+    def getMotor(self):
+        """
+        :yields: The Talon FX controlling the climber motor.
+        """
+        yield self.motor

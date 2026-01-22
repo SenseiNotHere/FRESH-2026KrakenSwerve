@@ -98,6 +98,11 @@ class LimelightCamera(Subsystem):
         """
         self.table.putNumber("stream", mode)
 
+    def getAprilTagID(self) -> int | None:
+        rawID = self.table.getString("id", "")
+        tagID = int(rawID) if rawID.isdigit() else None
+        return tagID
+
 def _fix_name(name: str):
     if not name:
         name = "limelight"

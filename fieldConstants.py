@@ -1,5 +1,7 @@
 from wpimath.geometry import Pose2d, Pose3d, Rotation3d
 from wpimath.units import inchesToMeters
+from wpilib import DriverStation
+from wpimath.geometry import Translation2d
 
 # Field dimensions (meters)
 
@@ -23,7 +25,6 @@ def shouldFlipValueToRed() -> bool:
     """
     Replace this with DriverStation alliance logic.
     """
-    from wpilib import DriverStation
 
     alliance = DriverStation.getAlliance()
     return alliance == DriverStation.Alliance.kRed
@@ -88,3 +89,42 @@ class Hub:
         inchesToMeters(72.0),
         Rotation3d(),
     )
+
+class AprilTags:
+    APRIL_TAG_POSITIONS = {
+        1: Translation2d(3.6074798, 3.3902756),
+        2: Translation2d(3.6449194, 0.6035400),
+        3: Translation2d(3.0413646, 0.3557376),
+        4: Translation2d(3.0413646, 0.0001376),
+        5: Translation2d(3.6449194, -0.6032648),
+        6: Translation2d(3.6074798, -3.3900004),
+        7: Translation2d(3.6823844, -3.3900004),
+        8: Translation2d(4.0005194, -0.6032648),
+
+        9: Translation2d(4.2486774, -0.3554624),
+        10: Translation2d(4.2486774, 0.0001376),
+        11: Translation2d(4.0005194, 0.6035400),
+        12: Translation2d(3.6823844, 3.3902756),
+        13: Translation2d(8.2628172, 3.3688126),
+        14: Translation2d(8.2628172, 2.9370126),
+        15: Translation2d(8.2624616, 0.2890626),
+        16: Translation2d(8.2624616, -0.1427374),
+
+        17: Translation2d(-3.6074156, -3.3900004),
+        18: Translation2d(-3.6448806, -0.6032648),
+        19: Translation2d(-3.0413258, -0.3554624),
+        20: Translation2d(-3.0413258, 0.0001376),
+        21: Translation2d(-3.6448806, 0.6035400),
+        22: Translation2d(-3.6074156, 3.3902756),
+        23: Translation2d(-3.6823202, 3.3902756),
+        24: Translation2d(-4.0004806, 0.6035400),
+
+        25: Translation2d(-4.2486386, 0.3557376),
+        26: Translation2d(-4.2486386, 0.0001376),
+        27: Translation2d(-4.0004806, -0.6032648),
+        28: Translation2d(-3.6823202, -3.3900004),
+        29: Translation2d(-8.2627530, -3.3685374),
+        30: Translation2d(-8.2627530, -2.9367374),
+        31: Translation2d(-8.2624228, -0.2887874),
+        32: Translation2d(-8.2624228, 0.1430126)
+    }

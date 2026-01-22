@@ -4,12 +4,15 @@ from commands2 import cmd, InstantCommand, RunCommand
 from commands2.button import CommandGenericHID
 from subsystems.drivesubsystem import DriveSubsystem
 from subsystems.limelightcamera import LimelightCamera
+from subsystems.orchestrasubsystem import OrchestraSubsystem
 from constants import *
+from fieldConstants import AprilTags
 
 from commands.reset_XY import ResetXY, ResetSwerveFront
 from commands.followObject import FollowObject
 from commands.limelightComands import SetCameraPipeline
 from commands.drive_torwards_object import SwerveTowardsObject
+from commands.point_torwards_location import PointTowardsLocation
 
 class ButtonBindings:
     def __init__(self, robot_container):
@@ -23,6 +26,9 @@ class ButtonBindings:
             self.shooter = robot_container.shooter
         if IndexerConstants.kIndexerEnabled:
             self.indexer = robot_container.indexer
+
+        self.orchestra = robot_container.orchestra
+
 
     def configureButtonBindings(self):
         """Configure button bindings for the robot."""
@@ -49,11 +55,26 @@ class ButtonBindings:
 
         # Play selected song
         bButton = self.driverController.button(XboxController.Button.kB)
-        bButton.onTrue(InstantCommand(lambda: self.robotDrive.playSound(self.robotContainer.songChooser.getSelected())))
+#        bButton.onTrue(InstantCommand(lambda: self.orchestra.loadSound(self.robotContainer.songChooser.getSelected())))
+#        bButton.onTrue(InstantCommand(lambda: self.orchestra.playSound()))
 
         # Stop song
+#        aButton = self.driverController.button(XboxController.Button.kA)
+#        aButton.onTrue(InstantCommand(lambda: self.robotDrive.stopSound()))
+
+        # Point torwards currently looking tag
         aButton = self.driverController.button(XboxController.Button.kA)
-        aButton.onTrue(InstantCommand(lambda: self.robotDrive.stopSound()))
+        aButton.whileTrue(
+            PointTowardsLocation(
+                drivetrain=self.robotDrive,
+                location=lambda: AprilTags.APRIL_TAG_POSITIONS.get(
+                    self.limelight.getAprilTagID()
+                ),
+                locationIfRed=lambda: AprilTags.APRIL_TAG_POSITIONS.get(
+                    self.limelight.getRedAprilTagID()
+                )
+            )
+        )
 
         # Shooter + Indexer
         xButton = self.driverController.button(XboxController.Button.kX)
@@ -81,8 +102,7 @@ class ButtonBindings:
         yButton.whileTrue(
             SwerveTowardsObject(
                 self.robotDrive,
-                speed=lambda: -0.2,
+                speed=lambda: -1.0,
                 camera=self.limelight,
                 cameraLocationOnRobot=Pose2d(-0.4, 0, Rotation2d.fromDegrees(180))
-                # ^^ look, adding this fourth argument to specify that the camera is behind the center of the robot and is looking in the rear direction (180 degrees)
             ))
