@@ -15,6 +15,12 @@
           "data": {
             "pathName": "Action2"
           }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Action3"
+          }
         }
       ]
     }

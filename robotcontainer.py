@@ -2,20 +2,19 @@ from __future__ import annotations
 
 import math
 import typing
-
-import wpilib
-import wpimath
 import commands2
 
 from commands2 import cmd, InstantCommand, RunCommand
 from commands2.button import CommandGenericHID
+
+from pathplannerlib.auto import PathPlannerAuto
 
 from wpilib import (
     XboxController,
     PS4Controller,
     SmartDashboard,
     DriverStation,
-    DutyCycle,
+    SendableChooser
 )
 
 from wpimath.controller import (
@@ -47,7 +46,6 @@ from subsystems.indexersubsystem import Indexer
 from subsystems.climbersubsystem import ClimberSubsystem
 from subsystems.shotcalculator import ShotCalculator
 from subsystems.orchestrasubsystem import OrchestraSubsystem
-
 from commands.holonomicDrive import HolonomicDrive
 from buttonbindings import ButtonBindings
 
@@ -83,10 +81,10 @@ class RobotContainer:
         SmartDashboard.putData("Auto Chooser", self.autoChooser)
 
         # Test Chooser
-        self.testChooser = wpilib.SendableChooser()
+        self.testChooser = SendableChooser()
 
         # Song Chooser
-        self.songChooser = wpilib.SendableChooser()
+        self.songChooser = SendableChooser()
         self.songChooser.setDefaultOption(
             "Bloodline - Ariana Grande",
             "/home/lvuser/py/deploy/files/Bloodline.chrp",

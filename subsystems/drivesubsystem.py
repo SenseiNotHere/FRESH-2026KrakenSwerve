@@ -31,6 +31,8 @@ import navx
 from pathplannerlib.auto import AutoBuilder
 from pathplannerlib.controller import PPHolonomicDriveController
 from pathplannerlib.config import RobotConfig, PIDConstants
+from pathplannerlib.path import PathConstraints, PathPlannerPath
+from pathplannerlib.pathfinding import Pathfinding
 
 from phoenix6.orchestra import Orchestra
 
@@ -136,7 +138,7 @@ class DriveSubsystem(Subsystem):
 
         AutoBuilder.configure(
             self.getPose,  # Robot pose supplier
-            self.resetOdometry,  # Reset odometry at auto start
+            self.resetOdometryAuto,  # Reset odometry at auto start
             self.getRobotRelativeSpeeds,  # MUST be robot-relative speeds
             lambda speeds, _: self.driveRobotRelativeChassisSpeeds(speeds),
             PPHolonomicDriveController(
@@ -232,7 +234,7 @@ class DriveSubsystem(Subsystem):
         """Resets the odometry to the specified pose.
 
         :param pose: The pose to which to set the odometry.
-
+        :param resetGyro: Whether to reset the gyro heading to the pose heading.
         """
         if resetGyro:
             self.gyro.reset()
@@ -248,6 +250,18 @@ class DriveSubsystem(Subsystem):
             pose,
         )
         self.odometryHeadingOffset = self.odometry.getPose().rotation() - self.getGyroHeading()
+
+    def resetOdometryAuto(self, pose: Pose2d):
+        self.odometry.resetPosition(
+            self.getGyroHeading(),
+            (
+                self.frontLeft.getPosition(),
+                self.frontRight.getPosition(),
+                self.backLeft.getPosition(),
+                self.backRight.getPosition(),
+            ),
+            pose,
+        )
 
     def adjustOdometry(self, dTrans: Translation2d, dRot: Rotation2d):
         """Adjusts the odometry by a specified translation and rotation delta.
@@ -364,20 +378,18 @@ class DriveSubsystem(Subsystem):
         self.backLeft.setDesiredState(rl)
         self.backRight.setDesiredState(rr)
 
-
     def driveRobotRelativeChassisSpeeds(self, speeds: ChassisSpeeds) -> None:
-        states = DrivingConstants.kDriveKinematics.toSwerveModuleStates(speeds)
+        discrete = ChassisSpeeds.discretize(speeds, 0.02)
+
+        states = DrivingConstants.kDriveKinematics.toSwerveModuleStates(discrete)
         fl, fr, rl, rr = SwerveDrive4Kinematics.desaturateWheelSpeeds(
             states, DrivingConstants.kMaxMetersPerSecond
         )
+
         self.frontLeft.setDesiredState(fl)
         self.frontRight.setDesiredState(fr)
         self.backLeft.setDesiredState(rl)
         self.backRight.setDesiredState(rr)
-
-        SmartDashboard.putNumber("Auto vx", speeds.vx)
-        SmartDashboard.putNumber("Auto omega", speeds.omega)
-
 
     def setX(self) -> None:
         """Sets the wheels into an X formation to prevent movement."""

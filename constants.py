@@ -177,7 +177,7 @@ class AutoConstants:
     # PathPlanner Robot Config
     moduleConfig = ModuleConfig(
         maxDriveVelocityMPS=DrivingConstants.kMaxMetersPerSecond,
-        driveMotor=DCMotor.krakenX60(),
+        driveMotor=DCMotor.krakenX60().withReduction(ModuleConstants.kDrivingMotorReduction),
         driveCurrentLimit=ModuleConstants.kDrivingMotorCurrentLimit,
         numMotors=4,
         wheelRadiusMeters=ModuleConstants.kWheelDiameterMeters / 2,

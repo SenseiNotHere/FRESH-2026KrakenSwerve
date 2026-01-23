@@ -3,7 +3,13 @@ from wpilib import SmartDashboard
 
 
 class AutoShoot(Command):
-    def __init__(self, shooter, indexer, shotCalculator, tolerance_rpm=150):
+    def __init__(
+            self,
+            shooter,
+            indexer,
+            shotCalculator,
+            tolerance_rpm=150
+    ):
         super().__init__()
 
         self.shooter = shooter
