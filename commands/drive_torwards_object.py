@@ -126,15 +126,19 @@ class SwerveTowardsObject(commands2.Command):
     def execute(self):
         now = Timer.getFPGATimestamp()
         robotXY: Pose2d = self.drivetrain.getPose()
+
         fwdSpeed = self.fwdSpeed()
+        fwdSpeed *= abs(fwdSpeed)
+        if fwdSpeed != 0 and abs(fwdSpeed) < Constants.kMinLateralSpeed:
+            fwdSpeed = math.copysign(Constants.kMinLateralSpeed, fwdSpeed)
 
         # 0. do we know the direction to the object? is it on the right or left of us?
         self.updateObjectLocation(now, robotXY)
 
         # 1. if direction to the object unknown, just drive slowly
         if self.targetLocationXY is None:
-            slow = fwdSpeed / 3
-            self.drivetrain.drive(xSpeed=slow, ySpeed=0, rotSpeed=0, fieldRelative=False, rateLimit=True, square=False)
+            slow = math.copysign(max(abs(fwdSpeed) / 3, Constants.kMinLateralSpeed), fwdSpeed)
+            self.drivetrain.drive(slow, 0, 0, fieldRelative=False, rateLimit=True, square=False)
             SmartDashboard.putNumber("SwerveTowardsObject/strafe-distance", float('nan'))
             return
 

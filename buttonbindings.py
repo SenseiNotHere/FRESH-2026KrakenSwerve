@@ -52,7 +52,7 @@ class ButtonBindings:
         povLeftDriverButton.whileTrue(InstantCommand(self.robotDrive.setX, self.robotDrive))
 
         # Play selected song
-        bButton = self.driverController.button(XboxController.Button.kB)
+#        bButton = self.driverController.button(XboxController.Button.kB)
 #        bButton.onTrue(InstantCommand(lambda: self.orchestra.loadSound(self.robotContainer.songChooser.getSelected())))
 #        bButton.onTrue(InstantCommand(lambda: self.orchestra.playSound()))
 
@@ -96,15 +96,19 @@ class ButtonBindings:
 
             # elif statement end
 
-        # Swerve to Object
-        yButton = self.driverController.button(XboxController.Button.kY)
-        yButton.whileTrue(
-            SwerveTowardsObject(
-                self.robotDrive,
-                speed=lambda: -0.5,
-                camera=self.limelight,
-                cameraLocationOnRobot=Pose2d(-0.4, 0, Rotation2d.fromDegrees(180))
-            ))
+        # Swerve to Object using left trigger button of the joystick
+        driveToGamepiece = SwerveTowardsObject(
+            drivetrain=self.robotDrive,
+            speed=lambda: -self.driverController.getRawAxis(XboxController.Axis.kLeftTrigger),  # speed controlled by "left trigger" stick of the joystick
+            camera=self.limelight,
+            cameraLocationOnRobot=Pose2d(-0.4, 0, Rotation2d.fromDegrees(180)),
+            # ^^ camera located at the rear middle looking straight back
+        )
+
+        # setup a condition for when to run that command
+        self.driverController.axisGreaterThan(
+            XboxController.Axis.kLeftTrigger, threshold=0.05
+        ).whileTrue(driveToGamepiece)
 
     def _log_and_get_april_tag_position(self, tag_id_callable, tag_id_name):
         tag_id = tag_id_callable()
