@@ -1,55 +1,34 @@
 from __future__ import annotations
 
-import math
 import typing
 import commands2
 
-from commands2 import cmd, InstantCommand, RunCommand
+from commands2 import InstantCommand
 from commands2.button import CommandGenericHID
-
-from pathplannerlib.auto import PathPlannerAuto
 
 from wpilib import (
     XboxController,
-    PS4Controller,
     SmartDashboard,
-    DriverStation,
     SendableChooser
 )
 
-from wpimath.controller import (
-    PIDController,
-    ProfiledPIDControllerRadians,
-    HolonomicDriveController,
-)
-
 from wpimath.geometry import (
-    Pose2d,
     Rotation2d,
-    Translation2d,
     Translation3d,
 )
 
-from wpimath.kinematics import (
-    ChassisSpeeds,
-    SwerveModuleState,
-    SwerveDrive4Kinematics,
-    SwerveDrive4Odometry,
-)
-
-from subsystems.drivesubsystem import DriveSubsystem, BadSimPhysics, AutoBuilder
-from subsystems.phoenixswervemodule import PhoenixSwerveModule
-from subsystems.limelightcamera import LimelightCamera
-from subsystems.limelight_localizer import LimelightLocalizer
-from subsystems.shootersubsystem import Shooter
-from subsystems.indexersubsystem import Indexer
-from subsystems.climbersubsystem import ClimberSubsystem
-from subsystems.shotcalculator import ShotCalculator
-from subsystems.orchestrasubsystem import OrchestraSubsystem
-from commands.holonomicDrive import HolonomicDrive
+from subsystems.drive.drivesubsystem import DriveSubsystem, BadSimPhysics, AutoBuilder
+from subsystems.vision.limelightcamera import LimelightCamera
+from subsystems.vision.limelight_localizer import LimelightLocalizer
+from subsystems.shooter.shootersubsystem import Shooter
+from subsystems.shooter.indexersubsystem import Indexer
+from subsystems.climber.climbersubsystem import ClimberSubsystem
+from subsystems.shooter.shotcalculator import ShotCalculator
+from subsystems.orchestra.orchestrasubsystem import OrchestraSubsystem
+from commands.drive.holonomicDrive import HolonomicDrive
 from buttonbindings import ButtonBindings
 
-from constants import (
+from constants.constants import (
     OIConstants,
     ShooterConstants,
     IndexerConstants,

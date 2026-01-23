@@ -13,7 +13,7 @@ from phoenix6.signals import (
     InvertedValue
 )
 
-from constants import IndexerConstants
+from constants.constants import IndexerConstants
 
 class Indexer(Subsystem):
     def __init__(self, motorCANID: int, motorInverted: bool):

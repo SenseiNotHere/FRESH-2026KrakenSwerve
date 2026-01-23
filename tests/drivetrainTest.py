@@ -1,5 +1,5 @@
-from commands.aimToDirection import AimToDirection
-from commands.holonomicDrive import HolonomicDrive
+from commands.drive.aimToDirection import AimToDirection
+from commands.drive.holonomicDrive import HolonomicDrive
 
 def testDrive(drivetrain):
     AimToDirection(

@@ -20,7 +20,7 @@ from phoenix6.signals import (
 from phoenix6.controls import VelocityVoltage, PositionVoltage
 from phoenix6.orchestra import Orchestra
 
-from constants import ModuleConstants
+from constants.constants import ModuleConstants
 
 
 class PhoenixSwerveModule(Subsystem):

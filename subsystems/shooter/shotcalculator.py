@@ -1,9 +1,8 @@
 from commands2 import Subsystem
 from wpimath.geometry import Pose2d, Pose3d
-from wpimath.kinematics import ChassisSpeeds
 
-from fieldConstants import Hub
-from constants import ShooterConstants
+from constants.fieldConstants import Hub
+from constants.constants import ShooterConstants
 
 
 class ShotCalculator(Subsystem):

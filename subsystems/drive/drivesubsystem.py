@@ -21,29 +21,22 @@ from wpimath.kinematics import (
 from wpilib import (
     SmartDashboard,
     Field2d,
-    DriverStation
+    DriverStation,
+    Timer
 )
 
-from commands.aimToDirection import AimToDirectionConstants
+from commands.drive.aimToDirection import AimToDirectionConstants
 from .phoenixswervemodule import PhoenixSwerveModule
-import navx
 
 from pathplannerlib.auto import AutoBuilder
 from pathplannerlib.controller import PPHolonomicDriveController
-from pathplannerlib.config import RobotConfig, PIDConstants
-from pathplannerlib.path import PathConstraints, PathPlannerPath
-from pathplannerlib.pathfinding import Pathfinding
+from pathplannerlib.config import PIDConstants
 
-from phoenix6.orchestra import Orchestra
-
-from constants import (
+from constants.constants import (
     DrivingConstants,
     ModuleConstants,
     AutoConstants
 )
-from commands.holonomicDrive import HolonomicDrive
-
-import commands2
 
 from .wrapped_navx import NavxGyro
 
@@ -113,8 +106,7 @@ class DriveSubsystem(Subsystem):
         # from phoenix6.hardware import Pigeon2
         # self.gyro = Pigeon2(0)  # 0 is its CAN ID
 
-        self.xSpeedLimiter = SlewRateLimiter(DrivingConstants.kMagnitudeSlewRate)
-        self.ySpeedLimiter = SlewRateLimiter(DrivingConstants.kMagnitudeSlewRate)
+        self.xySpeedLimiter = SlewRateLimiter2d(DrivingConstants.kMagnitudeSlewRate)
         self.rotLimiter = SlewRateLimiter(DrivingConstants.kRotationalSlewRate)
 
         #Odometry class for tracking robot pose
@@ -362,8 +354,7 @@ class DriveSubsystem(Subsystem):
             targetChassisSpeeds = ChassisSpeeds(xSpeedGoal, ySpeedGoal, rotSpeedGoal)
 
         # rate limiting has to be applied this way, to keep the rate limiters current (with time)
-        slewedX = self.xSpeedLimiter.calculate(targetChassisSpeeds.vx)
-        slewedY = self.ySpeedLimiter.calculate(targetChassisSpeeds.vy)
+        slewedX, slewedY = self.xySpeedLimiter.calculate(targetChassisSpeeds.vx, targetChassisSpeeds.vy)
         slewedRot = self.rotLimiter.calculate(targetChassisSpeeds.omega)
         if rateLimit:
             targetChassisSpeeds.vx, targetChassisSpeeds.vy, targetChassisSpeeds.omega = slewedX, slewedY, slewedRot
@@ -519,6 +510,41 @@ class DriveSubsystem(Subsystem):
 
         # 3. if need to turn left, return the positive speed, otherwise negative
         return rotSpeed if degreesRemainingToTurn > 0 else -rotSpeed
+
+class SlewRateLimiter2d:
+    """
+    Slew rate limiter for a near-square drivetrain: limits the total acceleration along X axis and Y axis
+    (better than total sqrt(x^2 + y^2) acceleration because the drivetrain is not a circle)
+    """
+
+    def __init__(self, rate) -> None:
+        self.rate = rate
+        self.t = Timer.getFPGATimestamp()
+        self.x = self.y = 0.0
+
+    def calculate(self, x, y) -> typing.Tuple[float, float]:
+        t = Timer.getFPGATimestamp()
+
+        dx = x - self.x
+        dy = y - self.y
+
+        # this is the maximum permitted change in X or Y, given the slew rate
+        limit = self.rate * abs(t - self.t)
+        self.t = t
+
+        # this is the desired change in X or Y
+        change = max(abs(dx), abs(dy))
+
+        # is this change above the limit? if yes, apply slew rate
+        if limit > 0:
+            if change < limit:
+                self.x, self.y = x, y
+            else:
+                fraction = limit / change
+                self.x += dx * fraction
+                self.y += dy * fraction
+
+        return self.x, self.y
 
 
 class BadSimPhysics(object):

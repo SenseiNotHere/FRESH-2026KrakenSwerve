@@ -11,9 +11,13 @@ import typing
 import commands2
 
 from wpilib import SmartDashboard, Timer
-from wpimath.geometry import Rotation2d, Translation2d, Pose2d, Transform2d
-from constants import AutoConstants, KrakenX60
-from subsystems.drivesubsystem import DriveSubsystem
+from wpimath.geometry import (
+    Rotation2d,
+    Translation2d,
+    Pose2d
+)
+from constants.constants import AutoConstants, KrakenX60
+from subsystems.drive.drivesubsystem import DriveSubsystem
 
 
 class Constants:
@@ -21,8 +25,9 @@ class Constants:
     kDetectionTimeoutSeconds = 1.0  # if detection lost for this many seconds, done
 
     # for the swerve command:
-    kPTranslate = 0.02 / (KrakenX60.kMaxSpeedMetersPerSecond / 4.7)
+    kPTranslate = 0.125 / (KrakenX60.kMaxSpeedMetersPerSecond / 4.7)
     kMinLateralSpeed = 0.025  # driving slower than this is unproductive (motor might not even spin)
+    kLearningRate = 0.5  # with one sensor we shouldn't really use value<1, but just in case we can
 
     # for the tank command:
     kP = 0.001  # 0.002 is the default, but you must calibrate this to your robot
@@ -180,6 +185,7 @@ class SwerveTowardsObject(commands2.Command):
         SmartDashboard.putNumber("SwerveTowardsObject/distance", distance)
 
         fromCameraToTgt = Translation2d(distance * direction.cos(), distance * direction.sin())
+        fromCameraToTgt *= Constants.kLearningRate
         fromRobotToTgt = fromCameraToTgt.rotateBy(self.cameraOnRobot.rotation()) + self.cameraOnRobot.translation()
         fromRobotToTgtFieldRelative = fromRobotToTgt.rotateBy(robotXY.rotation())
 

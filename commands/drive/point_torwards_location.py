@@ -12,7 +12,7 @@ import commands2
 from wpilib import SmartDashboard, DriverStation
 from wpimath.geometry import Translation2d
 
-from subsystems.drivesubsystem import DriveSubsystem
+from subsystems.drive.drivesubsystem import DriveSubsystem
 
 
 class PointTowardsLocation(commands2.Command):

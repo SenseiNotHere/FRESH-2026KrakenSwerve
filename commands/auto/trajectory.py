@@ -11,10 +11,10 @@ import typing
 import commands2
 from commands2 import InstantCommand
 
-from subsystems.drivesubsystem import DriveSubsystem
-from commands.aimToDirection import AimToDirection
-from commands.swerveToPoint import SwerveToPoint
-from commands.goToPoint import GoToPoint
+from subsystems.drive.drivesubsystem import DriveSubsystem
+from commands.drive.aimToDirection import AimToDirection
+from commands.drive.swerveToPoint import SwerveToPoint
+from commands.drive.goToPoint import GoToPoint
 
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpilib import SmartDashboard, DriverStation
@@ -247,7 +247,7 @@ class SwerveTrajectory(JerkyTrajectory):
         endPt, endHeading = waypoints[-1]
 
         import math
-        from constants import DrivingConstants, AutoConstants
+        from constants.constants import DrivingConstants, AutoConstants
         from wpimath.trajectory import TrajectoryConfig, TrajectoryGenerator
         from wpimath.controller import PIDController, ProfiledPIDControllerRadians, HolonomicDriveController
 

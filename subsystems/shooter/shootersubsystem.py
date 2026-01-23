@@ -11,7 +11,7 @@ from phoenix6.signals import NeutralModeValue, InvertedValue
 
 from wpilib import SmartDashboard, SendableChooser
 
-from constants import ShooterConstants
+from constants.constants import ShooterConstants
 
 
 class Shooter(Subsystem):

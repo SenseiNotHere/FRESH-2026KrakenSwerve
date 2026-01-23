@@ -8,13 +8,12 @@ from __future__ import annotations
 import commands2
 import math
 
-import constants
-from subsystems.drivesubsystem import DriveSubsystem
+from subsystems.drive.drivesubsystem import DriveSubsystem
 from wpimath.geometry import Rotation2d, Translation2d
 from wpilib import SmartDashboard
 
-from commands.aimToDirection import AimToDirectionConstants
-from constants import AutoConstants, KrakenX60
+from commands.drive.aimToDirection import AimToDirectionConstants
+from constants.constants import AutoConstants, KrakenX60
 
 class GoToPointConstants:
     kPTranslate = 0.25 / (KrakenX60.kMaxSpeedMetersPerSecond / 4.7)

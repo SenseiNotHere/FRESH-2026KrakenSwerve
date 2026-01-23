@@ -16,7 +16,7 @@ from phoenix6.signals import (
     MotorAlignmentValue)
 from wpilib import SmartDashboard
 
-from constants import IntakeConstants
+from constants.constants import IntakeConstants
 
 
 class Intake(Subsystem):

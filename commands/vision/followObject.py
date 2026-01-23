@@ -7,10 +7,10 @@ import math
 
 import commands2
 
-from commands.aimToDirection import AimToDirection, AimToDirectionConstants
-from commands.goToPoint import GoToPointConstants
+from commands.drive.aimToDirection import AimToDirection, AimToDirectionConstants
+from commands.drive.goToPoint import GoToPointConstants
 
-from subsystems.drivesubsystem import DriveSubsystem
+from subsystems.drive.drivesubsystem import DriveSubsystem
 from wpimath.geometry import Rotation2d
 from wpilib import Timer
 

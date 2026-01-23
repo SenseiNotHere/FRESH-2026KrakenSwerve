@@ -1,18 +1,12 @@
-from wpilib import XboxController, PS4Controller, SmartDashboard
+from wpilib import XboxController, SmartDashboard
 from wpimath.geometry import Pose2d, Rotation2d
-from commands2 import cmd, InstantCommand, RunCommand
-from commands2.button import CommandGenericHID
-from subsystems.drivesubsystem import DriveSubsystem
-from subsystems.limelightcamera import LimelightCamera
-from subsystems.orchestrasubsystem import OrchestraSubsystem
+from commands2 import InstantCommand
 from constants import *
-from fieldConstants import AprilTags
+from constants.fieldConstants import AprilTags
 
-from commands.reset_XY import ResetXY, ResetSwerveFront
-from commands.followObject import FollowObject
-from commands.limelightComands import SetCameraPipeline
-from commands.drive_torwards_object import SwerveTowardsObject
-from commands.point_torwards_location import PointTowardsLocation
+from commands.drive.reset_XY import ResetXY, ResetSwerveFront
+from commands.auto.drive_torwards_object import SwerveTowardsObject
+from commands.drive.point_torwards_location import PointTowardsLocation
 
 class ButtonBindings:
     def __init__(self, robot_container):

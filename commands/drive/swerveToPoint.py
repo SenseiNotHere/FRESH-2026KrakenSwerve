@@ -8,9 +8,9 @@ from __future__ import annotations
 import commands2
 import math
 
-from subsystems.drivesubsystem import DriveSubsystem
-from commands.aimToDirection import AimToDirectionConstants
-from commands.goToPoint import GoToPointConstants
+from subsystems.drive.drivesubsystem import DriveSubsystem
+from commands.drive.aimToDirection import AimToDirectionConstants
+from commands.drive.goToPoint import GoToPointConstants
 
 from wpimath.geometry import Rotation2d, Translation2d, Pose2d
 from wpilib import SmartDashboard
