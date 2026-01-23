@@ -164,7 +164,7 @@ class Shooter(Subsystem):
         current_rpm = self.motor.get_velocity().value * 60.0
         return current_rpm >= (target_rpm - tolerance_rpm)
 
-    def getMotor(self):
+    def getMotors(self):
         """
         :yields: The Talon FX controlling the climber motor.
         """

@@ -276,17 +276,8 @@ class IndexerConstants:
     kIndexerEnabled = False
 
 class ClimberConstants:
-    kClimberMotorID = 1
-
-    # Magnet offset
-    kMagnetOffset = 0.0
-
-    # Control gains
-    kP = 0.0
-    kD = 0.0
-
-    # Position
-    kMinPosition = 0.0
-    kMaxPosition = 0.0
+    kPCMID = 0
+    kForwardChannel = 0
+    kReverseChannel = 1
 
     kClimberEnabled = False

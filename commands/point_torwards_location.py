@@ -81,6 +81,14 @@ class PointTowardsLocation(commands2.Command):
         if self.active:
             return
 
+        # Ensure activeTargetLocation is not None
+        if self.activeTargetLocation is None:
+            SmartDashboard.putString(
+                "command/c" + self.__class__.__name__,
+                "Error: activeTargetLocation is None"
+            )
+            return
+
         # try to place that heading override now
         if self.drivetrain.startOverrideToFaceThisPoint(self.activeTargetLocation):
             self.active = True
@@ -99,4 +107,18 @@ class PointTowardsLocation(commands2.Command):
         return False  # never finish, wait for user to stop this command
 
     def _resolve(self, value):
-        return value() if callable(value) else value
+        # Log the input value to _resolve
+        SmartDashboard.putString(
+            "command/c" + self.__class__.__name__ + "/_resolve_input",
+            f"Input value: {value}"
+        )
+
+        resolved_value = value() if callable(value) else value
+
+        # Log the resolved value
+        SmartDashboard.putString(
+            "command/c" + self.__class__.__name__ + "/_resolve_output",
+            f"Resolved value: {resolved_value}"
+        )
+
+        return resolved_value

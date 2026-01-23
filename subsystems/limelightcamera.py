@@ -99,7 +99,12 @@ class LimelightCamera(Subsystem):
         self.table.putNumber("stream", mode)
 
     def getAprilTagID(self) -> int | None:
-        rawID = self.table.getString("id", "")
+        rawID = self.table.getString("tid", "")
+        tagID = int(rawID) if rawID.isdigit() else None
+        return tagID
+
+    def getRedAprilTagID(self) -> int | None:
+        rawID = self.table.getString("tid", "")
         tagID = int(rawID) if rawID.isdigit() else None
         return tagID
 

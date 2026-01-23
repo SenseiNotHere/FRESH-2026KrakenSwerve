@@ -1,4 +1,4 @@
-from wpilib import XboxController, PS4Controller
+from wpilib import XboxController, PS4Controller, SmartDashboard
 from wpimath.geometry import Pose2d, Rotation2d
 from commands2 import cmd, InstantCommand, RunCommand
 from commands2.button import CommandGenericHID
@@ -26,9 +26,7 @@ class ButtonBindings:
             self.shooter = robot_container.shooter
         if IndexerConstants.kIndexerEnabled:
             self.indexer = robot_container.indexer
-
         self.orchestra = robot_container.orchestra
-
 
     def configureButtonBindings(self):
         """Configure button bindings for the robot."""
@@ -62,17 +60,18 @@ class ButtonBindings:
 #        aButton = self.driverController.button(XboxController.Button.kA)
 #        aButton.onTrue(InstantCommand(lambda: self.robotDrive.stopSound()))
 
+        # Climber
+        if ClimberConstants.kClimberEnabled:
+            bButton = self.driverController.button(XboxController.Button.kB)
+            bButton.whenTrue(InstantCommand(lambda: self.robotContainer.climber.toggle()))
+
         # Point torwards currently looking tag
         aButton = self.driverController.button(XboxController.Button.kA)
         aButton.whileTrue(
             PointTowardsLocation(
                 drivetrain=self.robotDrive,
-                location=lambda: AprilTags.APRIL_TAG_POSITIONS.get(
-                    self.limelight.getAprilTagID()
-                ),
-                locationIfRed=lambda: AprilTags.APRIL_TAG_POSITIONS.get(
-                    self.limelight.getRedAprilTagID()
-                )
+                location=lambda: self._log_and_get_april_tag_position(self.limelight.getAprilTagID(), "getAprilTagID"),
+                locationIfRed=lambda: self._log_and_get_april_tag_position(self.limelight.getRedAprilTagID(), "getRedAprilTagID")
             )
         )
 
@@ -102,7 +101,20 @@ class ButtonBindings:
         yButton.whileTrue(
             SwerveTowardsObject(
                 self.robotDrive,
-                speed=lambda: -1.0,
+                speed=lambda: -0.5,
                 camera=self.limelight,
                 cameraLocationOnRobot=Pose2d(-0.4, 0, Rotation2d.fromDegrees(180))
             ))
+
+    def _log_and_get_april_tag_position(self, tag_id_callable, tag_id_name):
+        tag_id = tag_id_callable()
+        SmartDashboard.putString(
+            f"command/c{self.__class__.__name__}/{tag_id_name}",
+            f"Tag ID: {tag_id}"
+        )
+        position = AprilTags.APRIL_TAG_POSITIONS.get(tag_id)
+        SmartDashboard.putString(
+            f"command/c{self.__class__.__name__}/{tag_id_name}_position",
+            f"Position: {position}"
+        )
+        return position

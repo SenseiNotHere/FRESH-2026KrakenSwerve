@@ -18,7 +18,7 @@ GYRO_OVERSHOOT_FRACTION = 0.0 / 360
 
 class NavxGyro(Subsystem):
     """
-    An attempt to extend NavX gyro to take a calibrated correction for overshoot, and work better in simulation.
+    An attempt to _extend NavX gyro to take a calibrated correction for overshoot, and work better in simulation.
     Imitates get_yaw/set_yaw interfaces of Pigeon2, so you can easily switch to Pigeon2 from this.
     """
     def __init__(self, gyroOvershootFraction: float = GYRO_OVERSHOOT_FRACTION) -> None:

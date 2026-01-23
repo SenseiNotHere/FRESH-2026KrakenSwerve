@@ -44,13 +44,19 @@ from subsystems.limelightcamera import LimelightCamera
 from subsystems.limelight_localizer import LimelightLocalizer
 from subsystems.shootersubsystem import Shooter
 from subsystems.indexersubsystem import Indexer
+from subsystems.climbersubsystem import ClimberSubsystem
 from subsystems.shotcalculator import ShotCalculator
 from subsystems.orchestrasubsystem import OrchestraSubsystem
 
 from commands.holonomicDrive import HolonomicDrive
 from buttonbindings import ButtonBindings
 
-from constants import *
+from constants import (
+    OIConstants,
+    ShooterConstants,
+    IndexerConstants,
+    ClimberConstants
+)
 import tests
 
 
@@ -165,6 +171,14 @@ class RobotContainer:
             self.indexer = Indexer(
                 motorCANID=IndexerConstants.kIndexerMotorID,
                 motorInverted=False,
+            )
+
+        # Climber
+        if ClimberConstants.kClimberEnabled:
+            self.climber = ClimberSubsystem(
+                pcmCANID=ClimberConstants.kPCMID,
+                forwardChannel=ClimberConstants.kForwardChannel,
+                reverseChannel=ClimberConstants.kReverseChannel
             )
 
         # Orchestra

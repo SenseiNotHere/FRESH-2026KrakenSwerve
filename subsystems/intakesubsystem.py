@@ -120,7 +120,7 @@ class Intake(Subsystem):
     def getRPM(self) -> float:
         return self.leadMotor.get_velocity().value * 60.0
 
-    def getMotor(self):
+    def getMotors(self):
         """
         :yields: The Talon FX controlling the climber motor.
         """

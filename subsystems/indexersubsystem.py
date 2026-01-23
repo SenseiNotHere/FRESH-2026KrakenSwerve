@@ -82,7 +82,7 @@ class Indexer(Subsystem):
             self.percentRequest.with_output(percent)
         )
 
-    def getMotor(self):
+    def getMotors(self):
         """
         :yields: The Talon FX controlling the climber motor.
         """
