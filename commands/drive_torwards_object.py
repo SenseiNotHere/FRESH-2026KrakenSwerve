@@ -12,7 +12,7 @@ import commands2
 
 from wpilib import SmartDashboard, Timer
 from wpimath.geometry import Rotation2d, Translation2d, Pose2d, Transform2d
-from constants import AutoConstants, KrakenX60
+from constants import AutoConstants, KrakenX60, DrivingConstants
 from subsystems.drivesubsystem import DriveSubsystem
 
 
@@ -194,7 +194,7 @@ class SwerveTowardsObject(commands2.Command):
                 self.drivetrain.field.getObject("swerve-towards").setPoses(_square(self.lastTargetLocationXY, side=0.1))
                 if self.initialRobotToTarget is None or smallerObject:
                     self.initialRobotToTarget = self.lastTargetLocationXY - robotXY.translation()
-                    self.finalRobotToTargetDotProduct = self.initialRobotToTarget.norm() * DriveConstants.kWheelBase / 2
+                    self.finalRobotToTargetDotProduct = self.initialRobotToTarget.norm() * DrivingConstants.kWheelBase / 2
                     self.finalRobotToTargetDotProduct *= 1.5  # fudge factor
                     SmartDashboard.putString("command/c" + self.__class__.__name__, "acquired")
                     # ^^dotprod(initialRobotToTarget, robotToTarget) will be dropping until ~this value during approach
