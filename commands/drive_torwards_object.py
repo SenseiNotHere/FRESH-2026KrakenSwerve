@@ -21,9 +21,9 @@ class Constants:
     kDetectionTimeoutSeconds = 1.0  # if detection lost for this many seconds, done
 
     # for the swerve command:
-    kPTranslate = 0.125 / (KrakenX60.kMaxSpeedMetersPerSecond / 4.7)
+    kPTranslate = 0.25 / (KrakenX60.kMaxSpeedMetersPerSecond / 4.7)
     kMinLateralSpeed = 0.025  # driving slower than this is unproductive (motor might not even spin)
-    kLearningRate = 0.5  # with one sensor we shouldn't really use value<1, but just in case we can
+    kLearnRate = 0.85  # should be 1.0, but really a fudge factor that improves stability of convergence, like "learning rate" elsewhere
 
     # for the tank command:
     kP = 0.001  # 0.002 is the default, but you must calibrate this to your robot
@@ -32,13 +32,14 @@ class Constants:
 
 class SwerveTowardsObject(commands2.Command):
     """
+    Approaches *one* object (if you want to approach more than one, use ".repeatedly()" as shown below).
     One can use this command to approach gamepieces using camera on the front or back of the robot (back: reverse=True).
     Example (this can go into robotcontaier.py, inside of configureButtonBindings() function):
 
         ```
             from commands.drive_towards_object import SwerveTowardsObject
 
-            # create a command for driving towards the gamepiece, using existing Limelight camera and pipeline 1 inside it
+            # create a command for driving towards one gamepiece, using existing Limelight camera and pipeline 1 inside it
             driveToGamepiece = SwerveTowardsObject(
                 drivetrain=self.robotDrive,
                 speed=lambda: self.driverController.getRawAxis(XboxController.Axis.kLeftTrigger),  # speed controlled by "left trigger" stick of the joystick
@@ -46,6 +47,7 @@ class SwerveTowardsObject(commands2.Command):
                 camera=self.frontPickupCamera,
                 cameraLocationOnRobot=Pose2d(x=+0.4, y=-0.2, rotation=Rotation2d.fromDegrees(30)),  # camera located at front-right and tilted 30 degrees to the left
                 cameraPipeline=1,  # if pipeline 1 in that camera is setup to do gamepiece detection
+                dontSwitchToSmallerObject=True,
             )
 
             # setup a condition for when to run that command
@@ -53,8 +55,11 @@ class SwerveTowardsObject(commands2.Command):
                 XboxController.Axis.kLeftTrigger, threshold=0.1
             )
 
+            # make a command to repeatedly drive to gamepieces (i.e. to do it again after one gamepiece reached)
+            driveToManyGamepieces = driveToGamepiece.repeatedly()
+
             # connect the command to its trigger
-            whenLeftTriggerPressed.whileTrue(driveToGamepiece)
+            whenLeftTriggerPressed.whileTrue(driveToManyGamepieces)
 
         ```
     """
@@ -68,9 +73,9 @@ class SwerveTowardsObject(commands2.Command):
         cameraPipeline: int = -1,
         objectDiameterMeters: float = 0.2,
         maxLateralSpeed=1.0,
+        dontSwitchToSmallerObject: bool = False,
     ):
         """
-
         :param drivetrain: robot drivetrain (tank or swerve)
         :param speed: speed of driving forward (not turning), probably comes from the joystick
         :param camera: camera for object detection
@@ -81,6 +86,7 @@ class SwerveTowardsObject(commands2.Command):
         :param cameraPipeline: if not None, which pipeline in the camera is setup to detect this type of object
         :param objectDiameterMeters: needed for distance estimation
         :param maxLateralSpeed: maximum turning speed
+        :param dontSwitchToSmallerObject: if the old (bigger) object disappeared from frame, keep driving until reached
         """
         super().__init__()
 
@@ -95,6 +101,7 @@ class SwerveTowardsObject(commands2.Command):
         self.addRequirements(camera)
 
         self.cameraOnRobot = cameraLocationOnRobot
+        self.dontSwitchToSmallerObject = dontSwitchToSmallerObject
 
         assert objectDiameterMeters > 0
         self.objectDiameterMeters = objectDiameterMeters
@@ -105,13 +112,22 @@ class SwerveTowardsObject(commands2.Command):
         self.maxLateralSpeed = maxLateralSpeed
 
         self.startTime = 0.0
+        self.reached = False
         self.lastTimeDetected = None
-        self.targetLocationXY: Translation2d | None = None
+        self.lastTargetAreaSize: float = 0.0
+        self.lastTargetLocationXY: Translation2d | None = None
+        self.initialRobotToTarget: Translation2d | None = None
+        self.finalRobotToTargetDotProduct = 0.0
 
 
     def initialize(self):
-        self.startTime = Timer.getFPGATimestamp()
+        self.lastTargetAreaSize = 0.0
         self.lastTimeDetected = None
+        self.lastTargetLocationXY = None
+        self.initialRobotToTarget = None
+
+        self.reached = False
+        self.startTime = Timer.getFPGATimestamp()
         SmartDashboard.putString("command/c" + self.__class__.__name__, "running")
 
         # if we have a Limelight camera and it is not on the pipeline we wanted, switch it
@@ -137,14 +153,14 @@ class SwerveTowardsObject(commands2.Command):
         self.updateObjectLocation(now, robotXY)
 
         # 1. if direction to the object unknown, just drive slowly
-        if self.targetLocationXY is None:
+        if self.lastTargetLocationXY is None:
             slow = math.copysign(max(abs(fwdSpeed) / 3, Constants.kMinLateralSpeed), fwdSpeed)
             self.drivetrain.drive(slow, 0, 0, fieldRelative=False, rateLimit=True, square=False)
             SmartDashboard.putNumber("SwerveTowardsObject/strafe-distance", float('nan'))
             return
 
         # 2. how far to we need to strafe to the left? (let's use the coordinates!)
-        vectorToTarget = (self.targetLocationXY - robotXY.translation()).rotateBy(-robotXY.rotation())
+        vectorToTarget = (self.lastTargetLocationXY - robotXY.translation()).rotateBy(-robotXY.rotation())
         SmartDashboard.putNumber("SwerveTowardsObject/strafe-distance", vectorToTarget.y)
 
         # 3. use proportional control to drive towards it
@@ -164,24 +180,54 @@ class SwerveTowardsObject(commands2.Command):
 
 
     def updateObjectLocation(self, now: float | None, robotXY: Pose2d):
+        # 1. do we have a detected object location?
         if self.camera.hasDetection():
+            self.lastTimeDetected = now
             x, a = self.camera.getX(), self.camera.getA()
-            if (a > 0) and (self.camStartingHeartbeat is None or self.camera.getHB() >= self.camStartingHeartbeat):
-                self.targetLocationXY = self.calculateObjectLocationXY(x, a, robotXY)
-                self.drivetrain.field.getObject("swerve-towards").setPoses(_square(self.targetLocationXY, side=0.1))
+            smallerObject = a < 0.8 * self.lastTargetAreaSize
+            if smallerObject and self.dontSwitchToSmallerObject:
+                pass  # do not switch to this smaller object that we are seeing now, until the bigger object is reached
 
+            elif (a > 0) and (self.camStartingHeartbeat is None or self.camera.getHB() >= self.camStartingHeartbeat):
+                self.lastTargetAreaSize = a
+                self.lastTargetLocationXY = self.calculateObjectLocationXY(x, a, robotXY)
+                self.drivetrain.field.getObject("swerve-towards").setPoses(_square(self.lastTargetLocationXY, side=0.1))
+                if self.initialRobotToTarget is None or smallerObject:
+                    self.initialRobotToTarget = self.lastTargetLocationXY - robotXY.translation()
+                    self.finalRobotToTargetDotProduct = self.initialRobotToTarget.norm() * DriveConstants.kWheelBase / 2
+                    self.finalRobotToTargetDotProduct *= 1.5  # fudge factor
+                    SmartDashboard.putString("command/c" + self.__class__.__name__, "acquired")
+                    # ^^dotprod(initialRobotToTarget, robotToTarget) will be dropping until ~this value during approach
+
+        # 2. or did we lose or reach the previously detected object?
+        reset = False
         if self.lastTimeDetected is not None and now > self.lastTimeDetected + Constants.kDetectionTimeoutSeconds:
-            #self.drivetrain.field.getObject("swerve-towards").setPoses([])
-            #SmartDashboard.putNumber("SwerveTowardsObject/distance", 0)
-            self.targetLocationXY = None
+            SmartDashboard.putString("command/c" + self.__class__.__name__, "lost")
+            reset = True   # no longer seeing the object and timed out
+        elif self.lastTargetLocationXY is not None:
+            assert self.initialRobotToTarget is not None, "initialRobotToTarget must be set when lastTargetLocationXY is set"
+            robotToTarget = self.lastTargetLocationXY - robotXY.translation()
+            if robotToTarget.dot(self.initialRobotToTarget) < self.finalRobotToTargetDotProduct:
+                SmartDashboard.putString("command/c" + self.__class__.__name__, "reached")
+                self.reached = True
+                reset = True
+                # if reached, reset the lastTargetLocation so the new target can be acquired
+
+        if reset:
+            self.drivetrain.field.getObject("swerve-towards").setPoses([])
+            SmartDashboard.putNumber("SwerveTowardsObject/distance", 0)
+            self.lastTargetAreaSize = 0
+            self.lastTimeDetected = None
+            self.lastTargetLocationXY = None
+            self.initialRobotToTarget = None
 
 
     def calculateObjectLocationXY(self, x, a, robotXY: Pose2d):
         distance, direction = self.calcualteDistanceFromDetectedObject(a), Rotation2d.fromDegrees(-x)
         SmartDashboard.putNumber("SwerveTowardsObject/distance", distance)
 
+        distance *= Constants.kLearnRate  # improves convergence, no other reason
         fromCameraToTgt = Translation2d(distance * direction.cos(), distance * direction.sin())
-        fromCameraToTgt *= Constants.kLearningRate
         fromRobotToTgt = fromCameraToTgt.rotateBy(self.cameraOnRobot.rotation()) + self.cameraOnRobot.translation()
         fromRobotToTgtFieldRelative = fromRobotToTgt.rotateBy(robotXY.rotation())
 
@@ -196,7 +242,9 @@ class SwerveTowardsObject(commands2.Command):
 
 
     def isFinished(self) -> bool:
-        return False  # never finishes on its own
+        if self.reached:
+            return True
+        return False  # otherwise never finishes on its own
 
 
     def calcualteDistanceFromDetectedObject(self, objectSizePercent):
@@ -209,8 +257,8 @@ class SwerveTowardsObject(commands2.Command):
         #
         # in other words, we can use this approximate formula for distance (if we have 0.2 * 0.2 meter AprilTag)
         """
-        distance = math.sqrt(self.objectDiameterMeters * self.objectDiameterMeters / (2.0 * 0.01 * objectSizePercent))
-        # note: Arducam w OV9281 is 1.70 steradians, not 2.0
+        distance = math.sqrt(self.objectDiameterMeters * self.objectDiameterMeters / (1.33 * 0.01 * objectSizePercent))
+        # note: Arducam w OV9281 is 1.70 steradians, not 1.33
 
         return distance
 
