@@ -10,8 +10,10 @@
       "/SmartDashboard/ApproachTagTrjShape": "String Chooser",
       "/SmartDashboard/Auto Chooser": "String Chooser",
       "/SmartDashboard/Field": "Field2d",
+      "/SmartDashboard/Indexer Speed": "String Chooser",
       "/SmartDashboard/LocaLearnRate": "String Chooser",
       "/SmartDashboard/Localizer": "String Chooser",
+      "/SmartDashboard/Shooter Speed": "String Chooser",
       "/SmartDashboard/Song Selection": "String Chooser"
     }
   },

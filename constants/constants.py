@@ -1,28 +1,46 @@
 import math
 
+from wpilib import PneumaticsModuleType
 from wpimath import units
 from wpimath.geometry import Translation2d
 from wpimath.kinematics import SwerveDrive4Kinematics
 from wpimath.trajectory import TrapezoidProfileRadians
-
-from utils.interpolatingMap import InterpolatingMap
 
 from phoenix6.hardware import talon_fx
 from phoenix6.signals import NeutralModeValue
 
 from pathplannerlib.config import RobotConfig, ModuleConfig, DCMotor
 
+from utils.interpolatingMap import InterpolatingMap
 
-# Motor Specs
 
 class KrakenX60:
     kFreeSpeedRpm = 5800
     kMaxSpeedMetersPerSecond = 2.8
 
-
-# Drivetrain / Chassis Constants
-
 class DrivingConstants:
+
+    # Physical Limits
+    kMaxMetersPerSecond = 3.0
+    kMaxAngularSpeed = math.tau
+
+    # Slew Rate Limiting
+    kMagnitudeSlewRate = 9.8
+    kRotationalSlewRate = 12.0
+
+    # Robot Geometry
+    kTrackWidth = units.inchesToMeters(26.5)
+    kWheelBase = units.inchesToMeters(26.5)
+
+    kModulePositions = [
+        Translation2d(+kWheelBase / 2, +kTrackWidth / 2),
+        Translation2d(+kWheelBase / 2, -kTrackWidth / 2),
+        Translation2d(-kWheelBase / 2, +kTrackWidth / 2),
+        Translation2d(-kWheelBase / 2, -kTrackWidth / 2),
+    ]
+
+    kDriveKinematics = SwerveDrive4Kinematics(*kModulePositions)
+
     # CAN IDs – Drive Motors
     kFrontLeftDriving = 7
     kFrontRightDriving = 5
@@ -41,39 +59,31 @@ class DrivingConstants:
     kBackLeftTurningEncoder = 1
     kBackRightTurningEncoder = 2
 
-    # Physical Limits
-    kMaxMetersPerSecond = 3.0
-    kMaxAngularSpeed = math.tau
-
-    # Slew Rate Limiting
-    kMagnitudeSlewRate = 9.8      # (m/s) / s  =  9.8 means acceleration of up to 1g is allowed in X or Y direction
-    kRotationalSlewRate = 12.0     # (rad/s) / s
-
-    # Robot Geometry
-    kTrackWidth = units.inchesToMeters(26.5)
-    kWheelBase = units.inchesToMeters(26.5)
-
-    kModulePositions = [
-        Translation2d(+kWheelBase / 2, +kTrackWidth / 2),   # Front Left
-        Translation2d(+kWheelBase / 2, -kTrackWidth / 2),   # Front Right
-        Translation2d(-kWheelBase / 2, +kTrackWidth / 2),   # Back Left
-        Translation2d(-kWheelBase / 2, -kTrackWidth / 2),   # Back Right
-    ]
-
-    kDriveKinematics = SwerveDrive4Kinematics(*kModulePositions)
-
     # Gyro
     kGyroReversed = -1
 
     # Lock Deadbands
-    kLockVxDeadband = 0.05      # m/s
-    kLockVyDeadband = 0.05      # m/s
-    kLockOmegaDeadband = 0.10  # rad/s
-
-# Individual Swerve Module Constants
+    kLockVxDeadband = 0.05
+    kLockVyDeadband = 0.05
+    kLockOmegaDeadband = 0.10
 
 class ModuleConstants:
-    # Motor / Encoder Inversion
+
+    # Gear Ratios / Mechanics
+    kDrivingMotorPinionTeeth = 14
+    kDrivingMotorReduction = 6.12
+    kTurningMotorReduction = 287 / 11.0
+
+    kWheelDiameterMeters = 0.0965
+    kWheelCircumferenceMeters = kWheelDiameterMeters * math.pi
+
+    # Derived Values
+    kDrivingMotorFreeSpeedRps = KrakenX60.kFreeSpeedRpm / 60.0
+    kDriveWheelFreeSpeedRps = (
+        kDrivingMotorFreeSpeedRps * kWheelCircumferenceMeters
+    ) / kDrivingMotorReduction
+
+    # Motor Inversions
     kTurningEncoderInverted = False
     kTurningMotorInverted = False
 
@@ -82,40 +92,17 @@ class ModuleConstants:
     kBackLeftDriveMotorInverted = True
     kBackRightDriveMotorInverted = False
 
-    # Absolute Encoder Offsets (rotations)
+    # Absolute Encoder Offsets
     kFrontLeftTurningEncoderOffset = 0.264892578125
     kFrontRightTurningEncoderOffset = 0.22265625
     kBackLeftTurningEncoderOffset = -0.080078125
     kBackRightTurningEncoderOffset = 0.09521484375
 
-    # Gear Ratios / Mechanics
-    kDrivingMotorPinionTeeth = 14
-    kDrivingMotorReduction = 6.12
-    kTurningMotorReduction = 287 / 11.0  # this is for MK5n (but it would be 260 / 10.0 for MK5i)
-
-    kWheelDiameterMeters = 0.0965
-    kWheelCircumferenceMeters = kWheelDiameterMeters * math.pi
-
-    # Derived Drive Values
-    kDrivingMotorFreeSpeedRps = KrakenX60.kFreeSpeedRpm / 60.0
-    kDriveWheelFreeSpeedRps = (
-        kDrivingMotorFreeSpeedRps * kWheelCircumferenceMeters
-    ) / kDrivingMotorReduction
-
     # Turning Encoder Conversion
     kTurningEncoderPositionFactor = math.tau
     kTurningEncoderVelocityFactor = math.tau / 60.0
-
     kTurningEncoderPositionPIDMinInput = 0.0
     kTurningEncoderPositionPIDMaxInput = kTurningEncoderPositionFactor
-
-    # Sync / Drift Control
-    kFusedAngleRefreshSeconds = 0.02
-    kTurningKalmanGain = 0.05
-    kTurningDriftDegrees = 10.0
-
-    kTurningSyncMaxVelocity = 0.5
-    kDrivingSyncMaxVelocity = 0.2
 
     # Drive PID + FF
     kDrivingP = 0.3
@@ -140,13 +127,16 @@ class ModuleConstants:
     kTurningMinOutput = -1.0
     kTurningMaxOutput = 1.0
 
+    # Drift / Sync
+    kFusedAngleRefreshSeconds = 0.02
+    kTurningKalmanGain = 0.05
+    kTurningDriftDegrees = 10.0
+    kTurningSyncMaxVelocity = 0.5
+    kDrivingSyncMaxVelocity = 0.2
+
     # Neutral Modes
-    kDrivingMotorIdleMode = talon_fx.signals.NeutralModeValue(
-        NeutralModeValue.BRAKE
-    )
-    kTurningMotorIdleMode = talon_fx.signals.NeutralModeValue(
-        NeutralModeValue.COAST
-    )
+    kDrivingMotorIdleMode = talon_fx.signals.NeutralModeValue(NeutralModeValue.BRAKE)
+    kTurningMotorIdleMode = talon_fx.signals.NeutralModeValue(NeutralModeValue.COAST)
 
     # Current Limits
     kDrivingMotorCurrentLimit = 70
@@ -154,27 +144,24 @@ class ModuleConstants:
     kTurningMotorCurrentLimit = 40
     kTurningStatorCurrentLimit = 60
 
-    # Misc / Coupling
+    # Misc
     kDrivingMinSpeedMetersPerSecond = 0.01
     kSteerDriveCouplingRatio = 3.857142857142857
     kSteerKs = 0.1
-
     kSteerHoldDeadband = math.radians(0.25) * (
         1.0 / ((2 * math.pi) / kTurningMotorReduction)
     )
 
-
-# Operator Interface
-
 class OIConstants:
+    # Driver controller
     kDriverControllerPort = 0
     kDriveDeadband = 0.05
 
-
-# Autonomous / PathPlanner
+    # Operator controller
+    kOperatorControllerPort = 1
 
 class AutoConstants:
-    # PathPlanner Robot Config
+
     moduleConfig = ModuleConfig(
         maxDriveVelocityMPS=DrivingConstants.kMaxMetersPerSecond,
         driveMotor=DCMotor.krakenX60().withReduction(ModuleConstants.kDrivingMotorReduction),
@@ -195,17 +182,14 @@ class AutoConstants:
     config.driveBaseRadius = 0.45
     config.maxCentripetalAcceleration = 3.0
 
-    # Driver Feel
     kUseSqrtControl = True
 
-    # Trajectory Limits
     kMaxMetersPerSecond = 1.2
     kMaxAccelerationMetersPerSecondSquared = 3.5
 
     kMaxAngularSpeedRadiansPerSecond = 5.0
     kMaxAngularSpeedRadiansPerSecondSquared = 25.0
 
-    # Holonomic PID
     kPXController = 5.0
     kPYController = 5.0
     kPThetaController = 6.0
@@ -218,32 +202,26 @@ class AutoConstants:
     kDYController = 0.0
     kDThetaController = 0.0
 
-    # Theta Constraints
     kThetaControllerConstraints = TrapezoidProfileRadians.Constraints(
         kMaxAngularSpeedRadiansPerSecond,
         kMaxAngularSpeedRadiansPerSecondSquared
     )
 
-# Shooter Constants
-
 class ShooterConstants:
-    # CAN IDs
+
+    kShooterEnabled = True
     kShooterMotorID = 9
-    # RPM Limits
-    kMinRPM = 600        # minimum sensible non-zero RPM
+
+    kMinRPM = 600
     kMaxRPM = 6000
 
-    # Control Gains (Velocity)
-    # Scaled for RPM-based control
     kFF = 0.12
     kP = 0.2
     kD = 0.0
 
-    # Current Limits
-    kShooterSupplyLimit = 40 # amps
-    kShooterStatorLimit = 140 # amps
+    kShooterSupplyLimit = 40
+    kShooterStatorLimit = 140
 
-    # Interpolation Map for Distance to RPM
     DISTANCE_TO_RPS = InterpolatingMap()
     DISTANCE_TO_RPS.insert(1.5, 42.0)
     DISTANCE_TO_RPS.insert(2.0, 48.0)
@@ -251,33 +229,72 @@ class ShooterConstants:
     DISTANCE_TO_RPS.insert(3.0, 60.0)
     DISTANCE_TO_RPS.insert(3.5, 66.0)
 
-    # Use shooter?
-    kShooterEnabled = False
+class PneumaticsConstants:
+    kPCMID = 0
+    kModuleType = PneumaticsModuleType.CTREPCM
 
 class IntakeConstants:
-    kLeadMotorCANID = 1
-    kFollowerMotorCANID = 2
 
-    # Control Gains
+    kIntakeEnabled = False
+    kIntakeMotorCANID = 1
+
+    kIntakeRPS = 20.0
+
     kFF = 0.12
     kP = 0.2
     kD = 0.0
 
-class IndexerConstants:
-    kIndexerMotorID = 0
+    kPneumaticsModuleType = PneumaticsModuleType.CTREPCM
+    kSolenoidModuleID = 0
+    kSolenoidForwardChannel = 1
+    kSolenoidReverseChannel = 0
 
-    # Control Gains
-    kP = 0.0
-    kD = 0.0
-    kFF = 0.12
+class IndexerConstants:
+
+    kIndexerEnabled = True
+    kIndexerMotorID = 2
+
     kMaxRPS = 40.0
     kFeedRPS = 18.0
 
-    kIndexerEnabled = False
+    kP = 0.0
+    kD = 0.0
+    kFF = 0.12
 
 class ClimberConstants:
-    kPCMID = 0
-    kForwardChannel = 0
-    kReverseChannel = 1
 
-    kClimberEnabled = False
+    kClimberEnabled = True
+
+    kMotorID = 10
+    kMotorInverted = False
+    kCanCoderCANID = 5
+
+    kPneumaticsModuleType = PneumaticsModuleType.CTREPCM
+    kPCMID = 0
+    kForwardChannel = 3
+    kReverseChannel = 4
+
+    kMaxPosition = -2.0
+    kMinPosition = -5.8
+    kClimbHeight = 10.0
+    kHeightTolerance = 0.01
+    kPositionDeadband = 0.01
+    kVelocityDeadband = 1.0
+    kStallCurrent = 55.0
+    kStallTime = 0.3
+    kManualSpeed = 1.0  # rotations per second
+
+    kP = 0.2
+    kI = 0.0
+    kD = 0.0
+    kFF = 0.0
+
+    kStatorCurrentLimit = 60
+    kSupplyCurrentLimit = 40
+
+    kManualRPS = 0.5
+
+class TrenchAssistConstants:
+
+    kTrenchAssistEnabled = False
+    kTriggerDistance = 0.9

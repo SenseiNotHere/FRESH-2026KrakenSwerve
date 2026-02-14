@@ -25,7 +25,7 @@ from wpilib import (
     Timer
 )
 
-from commands.drive.aimToDirection import AimToDirectionConstants
+from commands.drive.aim_to_direction import AimToDirectionConstants
 from .phoenixswervemodule import PhoenixSwerveModule
 
 from pathplannerlib.auto import AutoBuilder

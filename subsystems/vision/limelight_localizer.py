@@ -6,7 +6,7 @@ from commands2 import Subsystem
 from wpilib import SmartDashboard, SendableChooser, DriverStation
 from wpimath.geometry import Rotation2d, Translation3d, Pose2d, Translation2d
 
-from subsystems.vision.limelightcamera import LimelightCamera
+from .limelightcamera import LimelightCamera
 
 
 U_TURN = Rotation2d.fromDegrees(180)

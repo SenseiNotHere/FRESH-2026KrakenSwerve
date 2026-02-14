@@ -1,39 +1,243 @@
+from typing import Optional
+
 from commands2 import Subsystem
-from wpilib import Compressor, DoubleSolenoid, PneumaticsModuleType
+from wpilib import DoubleSolenoid, PneumaticsModuleType, SmartDashboard, Timer
+
+from phoenix6.controls import PositionVoltage, VelocityVoltage
+from phoenix6.hardware import TalonFX, CANcoder
+from phoenix6.configs import (
+    TalonFXConfiguration,
+    CANcoderConfiguration,
+    Slot0Configs,
+    CurrentLimitsConfigs
+)
+from phoenix6.signals import (
+    NeutralModeValue,
+    InvertedValue,
+    FeedbackSensorSourceValue,
+    SensorDirectionValue,
+    ReverseLimitSourceValue,
+    ReverseLimitTypeValue
+)
+
+from constants.constants import ClimberConstants
 
 
-class ClimberSubsystem(Subsystem):
+class Climber(Subsystem):
+
     def __init__(
         self,
-        pcmCANID: int,
+        motorCANID: int,
+        motorInverted: bool,
+        canCoderCANID: int,
+        canCoderInverted: bool,
+        solenoidCANID: int,
+        pneumaticsModuleType: PneumaticsModuleType,
         forwardChannel: int,
         reverseChannel: int,
+        canCoderOffset: Optional[float] = None
     ):
         super().__init__()
 
-        # Compressor on CTRE PCM
-        self.compressor = Compressor(
-            pcmCANID,
-            PneumaticsModuleType.CTREPCM
-        )
-        self.compressor.enableDigital()
+        # Hardware
+        self.motor = TalonFX(motorCANID)
+        self.canCoder = CANcoder(canCoderCANID)
 
-        # Double solenoid on the PCM
-        self.solenoid = DoubleSolenoid(
-            pcmCANID,
-            PneumaticsModuleType.CTREPCM,
-            forwardChannel,
-            reverseChannel
+        self.airbrake = DoubleSolenoid(
+            module=solenoidCANID,
+            moduleType=pneumaticsModuleType,
+            forwardChannel=forwardChannel,
+            reverseChannel=reverseChannel
         )
 
-    def extend(self):
-        self.solenoid.set(DoubleSolenoid.Value.kForward)
+        # CANcoder config
+        canCoderConfig = CANcoderConfiguration()
+        if canCoderOffset is not None:
+            canCoderConfig.magnet_sensor.magnet_offset = canCoderOffset
 
-    def retract(self):
-        self.solenoid.set(DoubleSolenoid.Value.kReverse)
+        canCoderConfig.magnet_sensor.sensor_direction = (
+            SensorDirectionValue.CLOCKWISE_POSITIVE
+            if canCoderInverted
+            else SensorDirectionValue.COUNTER_CLOCKWISE_POSITIVE
+        )
+        self.canCoder.configurator.apply(canCoderConfig)
 
-    def toggle(self):
-        if self.solenoid.get() == DoubleSolenoid.Value.kForward:
-            self.retract()
+        # Motor config
+        motorConfig = TalonFXConfiguration()
+        motorConfig.motor_output.neutral_mode = NeutralModeValue.BRAKE
+        motorConfig.motor_output.inverted = (
+            InvertedValue.CLOCKWISE_POSITIVE
+            if motorInverted
+            else InvertedValue.COUNTER_CLOCKWISE_POSITIVE
+        )
+
+        motorConfig.feedback.feedback_sensor_source = (
+            FeedbackSensorSourceValue.FUSED_CANCODER
+        )
+        motorConfig.feedback.feedback_remote_sensor_id = canCoderCANID
+
+        motorConfig.hardware_limit_switch.reverse_limit_enable = True
+        motorConfig.hardware_limit_switch.reverse_limit_source = (
+            ReverseLimitSourceValue.LIMIT_SWITCH_PIN
+        )
+        motorConfig.hardware_limit_switch.reverse_limit_autoset_position_enable = True
+        motorConfig.hardware_limit_switch.reverse_limit_autoset_position_value = (
+            ClimberConstants.kMinPosition
+        )
+        motorConfig.hardware_limit_switch.reverse_limit_type = (
+            ReverseLimitTypeValue.NORMALLY_OPEN
+        )
+
+        self.motor.configurator.apply(motorConfig)
+
+        # PID / Feedforward
+        slotConfig = Slot0Configs()
+        (
+            slotConfig
+            .with_k_p(ClimberConstants.kP)
+            .with_k_i(ClimberConstants.kI)
+            .with_k_d(ClimberConstants.kD)
+            .with_k_v(ClimberConstants.kFF)
+        )
+        self.motor.configurator.apply(slotConfig)
+
+        # Current Limits
+        currentLimits = CurrentLimitsConfigs()
+        (
+            currentLimits
+            .with_supply_current_limit(ClimberConstants.kSupplyCurrentLimit)
+            .with_supply_current_limit_enable(True)
+            .with_stator_current_limit(ClimberConstants.kStatorCurrentLimit)
+            .with_stator_current_limit_enable(True)
+        )
+        self.motor.configurator.apply(currentLimits)
+
+        self.positionRequest = PositionVoltage(0).with_slot(0)
+        self.velocityRequest = VelocityVoltage(0).with_slot(0)
+
+        # Sync motor to absolute
+        self.motor.set_position(self.getAbsolutePosition())
+
+        # State
+        self.targetPosition: float = self.getRelativePosition()
+        self.commandedActive: bool = False
+
+        self.jamTimer: float = 0.0
+        self.lastTime = Timer.getFPGATimestamp()
+
+        self.airbrakeEngaged = False
+        self.airbrake.set(DoubleSolenoid.Value.kReverse)
+
+    # Periodic – Jam Detection
+
+    def periodic(self):
+        now = Timer.getFPGATimestamp()
+        dt = now - self.lastTime
+        self.lastTime = now
+
+        velocity = self.motor.get_velocity().value
+        current = self.motor.get_stator_current().value
+        position = self.getRelativePosition()
+
+        positionError = abs(self.targetPosition - position)
+
+        tryingToMove = (
+            self.commandedActive and
+            positionError > ClimberConstants.kPositionDeadband
+        )
+
+        moving = abs(velocity) > ClimberConstants.kVelocityDeadband
+
+        if tryingToMove and not moving and current > ClimberConstants.kStallCurrent:
+            self.jamTimer += dt
         else:
-            self.extend()
+            self.jamTimer = 0.0
+
+        if self.jamTimer > ClimberConstants.kStallTime:
+            self.stop()
+            SmartDashboard.putBoolean("Climber/Jammed", True)
+        else:
+            SmartDashboard.putBoolean("Climber/Jammed", False)
+
+        SmartDashboard.putNumber("Climber/Position", position)
+        SmartDashboard.putBoolean("Climber/Airbrake", self.airbrakeEngaged)
+
+    # Position Control
+
+    def setPosition(self, pos: float):
+
+        if self.airbrakeEngaged:
+            return  # Do not allow movement while brake engaged
+
+        pos = max(
+            ClimberConstants.kMinPosition,
+            min(pos, ClimberConstants.kMaxPosition)
+        )
+
+        self.targetPosition = pos
+        self.commandedActive = True
+
+        self.motor.set_control(
+            self.positionRequest.with_position(pos)
+        )
+
+
+    def stop(self):
+        self.commandedActive = False
+        self.motor.set_control(
+            self.positionRequest.with_position(
+                self.getRelativePosition()
+            )
+        )
+
+    def atTarget(self) -> bool:
+        position_error = abs(
+            self.targetPosition - self.getRelativePosition()
+        )
+
+        velocity = abs(self.motor.get_velocity().value)
+
+        return (
+            position_error < ClimberConstants.kPositionDeadband
+            and velocity < ClimberConstants.kVelocityDeadband
+        )
+
+    # Manual Adjust
+
+    def manualVelocity(self, joystickValue: float):
+
+        deadband = 0.1
+
+        if abs(joystickValue) < deadband:
+            self.stop()
+            return
+
+        # Release brake automatically in manual
+        if self.airbrakeEngaged:
+            self.releaseAirbrake()
+
+        # Closed-loop velocity control
+        target_rps = joystickValue * ClimberConstants.kManualRPS
+
+        self.commandedActive = True
+        self.motor.set_control(
+            self.velocityRequest.with_velocity(target_rps)
+        )
+
+    # Airbrake
+
+    def engageAirbrake(self):
+        self.airbrake.set(DoubleSolenoid.Value.kForward)
+        self.airbrakeEngaged = True
+
+    def releaseAirbrake(self):
+        self.airbrake.set(DoubleSolenoid.Value.kReverse)
+        self.airbrakeEngaged = False
+
+    # Sensors
+
+    def getRelativePosition(self) -> float:
+        return self.motor.get_position().value
+
+    def getAbsolutePosition(self) -> float:
+        return self.canCoder.get_absolute_position().value

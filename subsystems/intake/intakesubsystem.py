@@ -1,134 +1,139 @@
-import time
+from typing import Optional
 
 from commands2 import Subsystem
-from phoenix6.configs import (
-    TalonFXConfiguration,
-    Slot0Configs
+from rev import (
+    SparkMax,
+    SparkMaxConfig,
+    SparkLowLevel,
+    SparkBase,
+    ResetMode,
+    PersistMode
 )
-from phoenix6.hardware import TalonFX
-from phoenix6.controls import (
-    VelocityVoltage,
-    Follower
+from wpilib import (
+    DoubleSolenoid,
+    PneumaticsModuleType,
+    SmartDashboard,
+    SendableChooser
 )
-from phoenix6.signals import (
-    NeutralModeValue,
-    InvertedValue,
-    MotorAlignmentValue)
-from wpilib import SmartDashboard
 
 from constants.constants import IntakeConstants
 
 
 class Intake(Subsystem):
+
     def __init__(
         self,
-        leadMotorCANID: int,
-        followerMotorCANID: int | None = None,
-        leadMotorInverted: bool = False,
+        motorCANID: int,
+        motorInverted: bool,
+        solenoidModuleID: int,
+        pneumaticsModuleType: PneumaticsModuleType,
+        forwardChannel: int,
+        reverseChannel: int
     ):
         super().__init__()
 
-        # Motors
-        self.leadMotor = TalonFX(leadMotorCANID)
-        self.followMotor = TalonFX(followerMotorCANID) if followerMotorCANID else None
+        # Motor
 
-        # Config
-        leadConfig = TalonFXConfiguration()
-        leadConfig.motor_output.neutral_mode = NeutralModeValue.BRAKE
-        leadConfig.motor_output.inverted = (
-            InvertedValue.CLOCKWISE_POSITIVE
-            if leadMotorInverted
-            else InvertedValue.COUNTER_CLOCKWISE_POSITIVE
+        self.motor = SparkMax(
+            motorCANID,
+            SparkLowLevel.MotorType.kBrushless
         )
-        self.leadMotor.configurator.apply(leadConfig)
 
-        slot0 = Slot0Configs()
-        (
-            slot0
-            .with_k_p(IntakeConstants.kP)
-            .with_k_d(IntakeConstants.kD)
-            .with_k_v(IntakeConstants.kFF)
+        config = SparkMaxConfig()
+        config.setIdleMode(SparkMaxConfig.IdleMode.kCoast)
+        config.inverted(motorInverted)
+
+        config.closedLoop.P(IntakeConstants.kP)
+        config.closedLoop.I(0.0)
+        config.closedLoop.D(IntakeConstants.kD)
+        config.closedLoop.velocityFF(IntakeConstants.kFF)
+        config.closedLoop.outputRange(-1.0, 1.0)
+
+        self.motor.configure(
+            config,
+            ResetMode.kResetSafeParameters,
+            PersistMode.kPersistParameters
         )
-        self.leadMotor.configurator.apply(slot0)
 
-        if self.followMotor:
-            followConfig = TalonFXConfiguration()
-            followConfig.motor_output.neutral_mode = NeutralModeValue.BRAKE
-            self.followMotor.configurator.apply(followConfig)
+        self.pid = self.motor.getClosedLoopController()
 
-            self.followMotor.set_control(
-                Follower(
-                    leadMotorCANID,
-                    motor_alignment=MotorAlignmentValue.OPPOSED
-                )
-            )
+        # Pneumatics
 
-        # Control Requests
-        self._stopRequest = VelocityVoltage(0).with_slot(0)
-        self._velocityRequest = VelocityVoltage(0).with_slot(0)
+        self.deploySolenoid = DoubleSolenoid(
+            module=solenoidModuleID,
+            moduleType=pneumaticsModuleType,
+            forwardChannel=forwardChannel,
+            reverseChannel=reverseChannel
+        )
+
+        self._deployed = False
+        self._setDeployed(False)  # Start safe
 
         # State
-        self._enabled = False
-        self._velocityRPM: float | None = None
 
-        self._timedActive = False
-        self._timedEndTime = 0.0
+        self._targetRPM: Optional[float] = None
+
+        # Speed chooser
+        self.speedChooser = SendableChooser()
+        self.speedChooser.setDefaultOption("100%", 1.0)
+        self.speedChooser.addOption("75%", 0.75)
+        self.speedChooser.addOption("50%", 0.5)
+        self.speedChooser.addOption("25%", 0.25)
+        self.speedChooser.addOption("0%", 0.0)
+
+        SmartDashboard.putData("Intake Speed", self.speedChooser)
 
     # Periodic
-    def periodic(self) -> None:
-        now = time.time()
 
-        if self._timedActive and now >= self._timedEndTime:
-            self._timedActive = False
-            self._velocityRPM = None
+    def periodic(self):
 
-        if self._enabled and self._velocityRPM is not None:
-            self._velocityRequest.with_velocity(self._rpmToRps(self._velocityRPM))
-            self.leadMotor.set_control(self._velocityRequest)
+        if self._targetRPM is None:
+            self.motor.set(0.0)
         else:
-            self.leadMotor.set_control(self._stopRequest)
+            self.pid.setReference(
+                self._targetRPM,
+                SparkBase.ControlType.kVelocity
+            )
 
-        # Debug
-        SmartDashboard.putBoolean("Intake Enabled", self._enabled)
-        SmartDashboard.putBoolean("Intake Timed", self._timedActive)
-        SmartDashboard.putNumber("Intake RPM", self.getRPM())
+        SmartDashboard.putBoolean("Intake/Deployed", self._deployed)
+        SmartDashboard.putNumber(
+            "Intake/Target RPM",
+            self._targetRPM if self._targetRPM else 0.0
+        )
 
-    # Public API
-    def enable(self) -> None:
-        self._enabled = True
+    # High-Level API (Superstructure Calls These)
 
-    def disable(self) -> None:
-        self._enabled = False
+    def startIntaking(self):
+        self._setDeployed(True)
+
+        scale = self.speedChooser.getSelected()
+        self._targetRPM = IntakeConstants.kIntakeRPS * 60.0 * scale
+
+    def reverse(self):
+        self._setDeployed(True)
+
+        scale = self.speedChooser.getSelected()
+        self._targetRPM = -IntakeConstants.kIntakeRPS * 60.0 * scale
+
+    def stop(self):
+        self._targetRPM = None
+        self.motor.set(0.0)
+
+    def stow(self):
         self.stop()
+        self._setDeployed(False)
 
-    def setRPM(self, rpm: float) -> None:
-        """Run intake at a constant RPM (until changed or stopped)."""
-        self._velocityRPM = rpm
-        self._timedActive = False
+    # Internal Deploy Control
 
-    def runForTime(self, rpm: float, seconds: float) -> None:
-        """Run intake at RPM for a fixed duration."""
-        self._velocityRPM = rpm
-        self._timedActive = True
-        self._timedEndTime = time.time() + seconds
+    def _setDeployed(self, deployed: bool):
+        if deployed:
+            self.deploySolenoid.set(DoubleSolenoid.Value.kForward)
+        else:
+            self.deploySolenoid.set(DoubleSolenoid.Value.kReverse)
 
-    def stop(self) -> None:
-        self._velocityRPM = None
-        self._timedActive = False
-        self.leadMotor.set_control(self._stopRequest)
+        self._deployed = deployed
 
-    def getRPM(self) -> float:
-        return self.leadMotor.get_velocity().value * 60.0
+    # State Queries
 
-    def getMotors(self):
-        """
-        :yields: The Talon FX controlling the climber motor.
-        """
-        yield self.leadMotor
-        if self.followMotor:
-            yield self.followMotor
-
-    # Helpers
-    @staticmethod
-    def _rpmToRps(rpm: float) -> float:
-        return rpm / 60.0
+    def isDeployed(self) -> bool:
+        return self._deployed

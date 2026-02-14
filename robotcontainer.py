@@ -5,6 +5,7 @@ import commands2
 
 from commands2 import InstantCommand
 from commands2.button import CommandGenericHID
+from commands2 import CommandScheduler
 
 from wpilib import (
     XboxController,
@@ -22,19 +23,26 @@ from subsystems.vision.limelightcamera import LimelightCamera
 from subsystems.vision.limelight_localizer import LimelightLocalizer
 from subsystems.shooter.shootersubsystem import Shooter
 from subsystems.shooter.indexersubsystem import Indexer
-from subsystems.climber.climbersubsystem import ClimberSubsystem
-from subsystems.shooter.shotcalculator import ShotCalculator
+from subsystems.climber.climbersubsystem import Climber
+from subsystems.intake.intakesubsystem import Intake
+from subsystems.pneumatics.pneumaticssubsystem import Pneumatics
+from subsystems.shooter.shot_calculator import ShotCalculator
 from subsystems.orchestra.orchestrasubsystem import OrchestraSubsystem
-from commands.drive.holonomicDrive import HolonomicDrive
+from superstructure.superstructure import Superstructure
+from commands.drive.holonomic_drive import HolonomicDrive
+
+from commands.climber.climber_commands import ManualClimb
+
 from buttonbindings import ButtonBindings
 
 from constants.constants import (
     OIConstants,
     ShooterConstants,
     IndexerConstants,
-    ClimberConstants
+    ClimberConstants,
+    IntakeConstants,
+    PneumaticsConstants
 )
-import tests
 
 
 class RobotContainer:
@@ -44,25 +52,27 @@ class RobotContainer:
     """
 
     def __init__(self, robot):
-        # Subsystems
+
+        # Drive Subsystem
+
         self.robotDrive = DriveSubsystem()
 
         if commands2.TimedCommandRobot.isSimulation():
             self.robotDrive.simPhysics = BadSimPhysics(self.robotDrive, robot)
 
         # Shot Calculator
+
         self.shotCalculator = ShotCalculator(
             drivetrain=self.robotDrive
         )
 
         # Auto Chooser
+
         self.autoChooser = AutoBuilder.buildAutoChooser()
         SmartDashboard.putData("Auto Chooser", self.autoChooser)
 
-        # Test Chooser
-        self.testChooser = SendableChooser()
-
         # Song Chooser
+
         self.songChooser = SendableChooser()
         self.songChooser.setDefaultOption(
             "Bloodline - Ariana Grande",
@@ -87,19 +97,24 @@ class RobotContainer:
         SmartDashboard.putData("Song Selection", self.songChooser)
 
         # Controllers
+
         self.driverController = CommandGenericHID(
             OIConstants.kDriverControllerPort
         )
+        self.operatorController = CommandGenericHID(
+            OIConstants.kOperatorControllerPort
+        )
 
         # Vision / Localization
+
         self.localizer = LimelightLocalizer(
             drivetrain=self.robotDrive,
             flipIfRed=True,
         )
 
         self.limelight = LimelightCamera("limelight-front")
+        self.limelight.setPiPMode(1)
         self.limelightBack = LimelightCamera("limelight-back")
-        self.limelightBack.setPiPMode(1)
 
         self.localizer.addCamera(
             camera=self.limelight,
@@ -111,13 +126,14 @@ class RobotContainer:
 
         self.localizer.addCamera(
             camera=self.limelightBack,
-            cameraPoseOnRobot=Translation3d(-18.0, 0.0, 0.0),
+            cameraPoseOnRobot=Translation3d(0.0, 0.0, 0.0),
             cameraHeadingOnRobot=Rotation2d.fromDegrees(180),
             minPercentFrame=0.07,
             maxRotationSpeed=720,
         )
 
         # Default Drive Command
+
         self.robotDrive.setDefaultCommand(
             HolonomicDrive(
                 self.robotDrive,
@@ -137,38 +153,86 @@ class RobotContainer:
             )
         )
 
-        # Shooter / Indexer
+        # Pneumatics
+
+        self.pneumatics = Pneumatics(
+            moduleID=PneumaticsConstants.kPCMID,
+            moduleType=PneumaticsConstants.kModuleType
+        )
+
+        # Optional Subsystems
+
+        self.shooter = None
         if ShooterConstants.kShooterEnabled:
             self.shooter = Shooter(
                 motorCANID=ShooterConstants.kShooterMotorID,
-                motorInverted=False,
+                motorInverted=True,
             )
 
+        self.indexer = None
         if IndexerConstants.kIndexerEnabled:
             self.indexer = Indexer(
                 motorCANID=IndexerConstants.kIndexerMotorID,
-                motorInverted=False,
+                motorInverted=True,
             )
 
-        # Climber
-        if ClimberConstants.kClimberEnabled:
-            self.climber = ClimberSubsystem(
-                pcmCANID=ClimberConstants.kPCMID,
-                forwardChannel=ClimberConstants.kForwardChannel,
-                reverseChannel=ClimberConstants.kReverseChannel
+        self.intake = None
+        if IntakeConstants.kIntakeEnabled:
+            self.intake = Intake(
+                motorCANID=IntakeConstants.kIntakeMotorCANID,
+                motorInverted=False,
+                solenoidModuleID=IntakeConstants.kSolenoidModuleID,
+                pneumaticsModuleType=IntakeConstants.kPneumaticsModuleType,
+                forwardChannel=IntakeConstants.kSolenoidForwardChannel,
+                reverseChannel=IntakeConstants.kSolenoidReverseChannel
             )
+
+        # Climber (always built for now)
+
+        self.climber = Climber(
+            motorCANID=ClimberConstants.kMotorID,
+            motorInverted=ClimberConstants.kMotorInverted,
+            solenoidCANID=ClimberConstants.kPCMID,
+            pneumaticsModuleType=ClimberConstants.kPneumaticsModuleType,
+            forwardChannel=ClimberConstants.kForwardChannel,
+            reverseChannel=ClimberConstants.kReverseChannel,
+            canCoderCANID=ClimberConstants.kCanCoderCANID,
+            canCoderInverted=False
+        )
 
         # Orchestra
 
-        self.orchestra = OrchestraSubsystem(driveSubsystem=self.robotDrive)
+        self.orchestra = OrchestraSubsystem(
+            driveSubsystem=self.robotDrive
+        )
+ 
+        # Superstructure (MUST BE LAST)
+
+        self.superstructure = Superstructure(
+            drivetrain=self.robotDrive,
+            shooter=self.shooter,
+            indexer=self.indexer,
+            shotCalculator=self.shotCalculator,
+            intake=self.intake,
+            climber=self.climber,
+            vision=self.limelight
+        )
 
         # Button Bindings
+
+        self.climber.setDefaultCommand(
+            ManualClimb(
+                self.superstructure,
+                lambda: self.operatorController.getRawAxis(
+                    XboxController.Axis.kLeftY
+                )
+            )
+        )
+
         self.buttonBindings = ButtonBindings(self)
         self.buttonBindings.configureButtonBindings()
 
-    def disablePIDSubsystems(self):
-        """Disables all PID subsystems."""
-        pass
+    # Autonomous
 
     def getAutonomousCommand(self) -> commands2.Command:
         command = self.autoChooser.getSelected()
@@ -180,11 +244,7 @@ class RobotContainer:
         print(f"Running autonomous routine: {command.getName()}")
         return command
 
+    # Test Mode
     def getTestCommand(self) -> typing.Optional[commands2.Command]:
         self.testChooser.setDefaultOption("None", None)
-        self.testChooser.addOption(
-            "Drivetrain",
-            InstantCommand(
-                tests.drivetrainTest.testDrive(self.robotDrive)
-            ),
-        )
+        return self.testChooser.getSelected()
