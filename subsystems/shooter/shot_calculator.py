@@ -1,7 +1,7 @@
 from commands2 import Subsystem
 from wpimath.geometry import Pose2d, Pose3d
 
-from constants.fieldConstants import Hub
+from constants.field_constants import Hub
 from constants.constants import ShooterConstants
 
 
@@ -9,9 +9,14 @@ class ShotCalculator(Subsystem):
     """
     Computes distance-based shooter speed and (optionally) effective target
     for shot-on-the-fly. No hood assumed.
+
+    Credits to FRC team 868
     """
 
-    def __init__(self, drivetrain):
+    def __init__(
+            self,
+            drivetrain
+    ):
         super().__init__()
 
         self.drivetrain = drivetrain

@@ -22,17 +22,24 @@ from subsystems.vision.limelightcamera import LimelightCamera
 from subsystems.vision.limelight_localizer import LimelightLocalizer
 from subsystems.shooter.shootersubsystem import Shooter
 from subsystems.shooter.indexersubsystem import Indexer
-from subsystems.climber.climbersubsystem import ClimberSubsystem
-from subsystems.shooter.shotcalculator import ShotCalculator
+from subsystems.climber.climbersubsystem import Climber
+from subsystems.intake.intakesubsystem import Intake
+from subsystems.pneumatics.pneumaticssubsystem import Pneumatics
+from subsystems.shooter.shot_calculator import ShotCalculator
 from subsystems.orchestra.orchestrasubsystem import OrchestraSubsystem
-from commands.drive.holonomicDrive import HolonomicDrive
+from superstructure.superstructure import Superstructure
+from commands.drive.holonomic_drive import HolonomicDrive
 from buttonbindings import ButtonBindings
+
+from commands.climber.climber_commands import ManualClimb
 
 from constants.constants import (
     OIConstants,
     ShooterConstants,
     IndexerConstants,
-    ClimberConstants
+    ClimberConstants,
+    IntakeConstants,
+    PneumaticsConstants
 )
 import tests
 
@@ -90,6 +97,7 @@ class RobotContainer:
         self.driverController = CommandGenericHID(
             OIConstants.kDriverControllerPort
         )
+        self.operatorController = CommandGenericHID(1)
 
         # Vision / Localization
         self.localizer = LimelightLocalizer(
@@ -137,6 +145,11 @@ class RobotContainer:
             )
         )
 
+        self.pneumatics = Pneumatics(
+            moduleID=PneumaticsConstants.kPCMID,
+            moduleType=PneumaticsConstants.kModuleType
+        )
+
         # Shooter / Indexer
         if ShooterConstants.kShooterEnabled:
             self.shooter = Shooter(
@@ -150,17 +163,49 @@ class RobotContainer:
                 motorInverted=False,
             )
 
-        # Climber
-        if ClimberConstants.kClimberEnabled:
-            self.climber = ClimberSubsystem(
-                pcmCANID=ClimberConstants.kPCMID,
-                forwardChannel=ClimberConstants.kForwardChannel,
-                reverseChannel=ClimberConstants.kReverseChannel
+        self.climber = Climber(
+            motorCANID=ClimberConstants.kMotorID,
+            motorInverted=ClimberConstants.kMotorInverted,
+            solenoidCANID=ClimberConstants.kPCMID,
+            pneumaticsModuleType=ClimberConstants.kPneumaticsModuleType,
+            forwardChannel=ClimberConstants.kForwardChannel,
+            reverseChannel=ClimberConstants.kReverseChannel,
+            canCoderCANID=ClimberConstants.kCanCoderCANID,
+            canCoderInverted=False
+        )
+
+        self.climber.setDefaultCommand(
+            ManualClimb(
+                self.climber,
+                joystick=lambda: -self.operatorController.getRawAxis(
+                    XboxController.Axis.kRightY
+                )
+            )
+        )
+
+        if IntakeConstants.kIntakeEnabled:
+            self.intake = Intake(
+                motorCANID=IntakeConstants.kIntakeMotorCANID,
+                motorInverted=False,
+                solenoidModuleID=IntakeConstants.kSolenoidModuleID,
+                pneumaticsModuleType=IntakeConstants.kPneumaticsModuleType,
+                forwardChannel=IntakeConstants.kSolenoidForwardChannel,
+                reverseChannel=IntakeConstants.kSolenoidReverseChannel
             )
 
         # Orchestra
 
         self.orchestra = OrchestraSubsystem(driveSubsystem=self.robotDrive)
+
+        # Superstructure - MUST BE LAST TO INITIALIZE!
+ #       self.superstructure = Superstructure(
+ #           drivetrain=self.robotDrive,
+ #           shooter=self.shooter,
+ #           shotCalculator=self.shotCalculator,
+ #           indexer=self.indexer,
+ #           climber=self.climber,
+ #           vision=self.limelight
+ #       )
 
         # Button Bindings
         self.buttonBindings = ButtonBindings(self)
@@ -182,9 +227,3 @@ class RobotContainer:
 
     def getTestCommand(self) -> typing.Optional[commands2.Command]:
         self.testChooser.setDefaultOption("None", None)
-        self.testChooser.addOption(
-            "Drivetrain",
-            InstantCommand(
-                tests.drivetrainTest.testDrive(self.robotDrive)
-            ),
-        )

@@ -128,3 +128,62 @@ class AprilTags:
         31: Translation2d(-8.2624228, -0.2887874),
         32: Translation2d(-8.2624228, 0.1430126)
     }
+
+class Trench:
+    FIELD_TYPE = 'Welded'
+
+    WELDED_BLUE_TRENCH_BOTTOM_CENTER = Pose3d(
+        inchesToMeters(182.115),
+        inchesToMeters(25.37),
+        inchesToMeters(35.00),
+        Rotation3d(),
+    )
+
+    WELDED_BLUE_TRENCH_TOP_CENTER = Pose3d(
+        inchesToMeters(182.115),
+        inchesToMeters(292.31),
+        inchesToMeters(35.00),
+        Rotation3d(),
+    )
+
+    WELDED_RED_TRENCH_BOTTOM_CENTER = Pose3d(
+        inchesToMeters(469.115),
+        inchesToMeters(25.37),
+        inchesToMeters(35.00),
+        Rotation3d(),
+    )
+
+    WELDED_RED_TRENCH_TOP_CENTER = Pose3d(
+        inchesToMeters(469.115),
+        inchesToMeters(292.31),
+        inchesToMeters(35.00),
+        Rotation3d(),
+    )
+
+    ANDYMARK_BLUE_TRENCH_BOTTOM_CENTER = Pose3d(
+        inchesToMeters(181.555),
+        inchesToMeters(24.85),
+        inchesToMeters(35.00),
+        Rotation3d(),
+    )
+
+    ANDYMARK_BLUE_TRENCH_TOP_CENTER = Pose3d(
+        inchesToMeters(181.555),
+        inchesToMeters(291.79),
+        inchesToMeters(35.00),
+        Rotation3d(),
+    )
+
+    ANDYMARK_RED_TRENCH_BOTTOM_CENTER = Pose3d(
+        inchesToMeters(468.555),
+        inchesToMeters(24.85),
+        inchesToMeters(35.00),
+        Rotation3d(),
+    )
+
+    ANDYMARK_RED_TRENCH_TOP_CENTER = Pose3d(
+        inchesToMeters(468.555),
+        inchesToMeters(291.79),
+        inchesToMeters(35.00),
+        Rotation3d(),
+    )

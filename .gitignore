@@ -7,22 +7,11 @@ __pycache__/
 # Virtual environments
 .venv/
 venv/
-env/
-
-# RobotPy cache
-./robotpy*
-
-# Logs
-*.log
 
 # VSCode / JetBrains / Editor stuff
 .vscode/
 .idea/
 .wpilib/
-
-# Build artifacts
-build/
-dist/
 
 # CTRE Sim
 ctre_sim/

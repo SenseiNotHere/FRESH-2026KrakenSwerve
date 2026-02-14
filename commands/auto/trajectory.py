@@ -12,9 +12,9 @@ import commands2
 from commands2 import InstantCommand
 
 from subsystems.drive.drivesubsystem import DriveSubsystem
-from commands.drive.aimToDirection import AimToDirection
-from commands.drive.swerveToPoint import SwerveToPoint
-from commands.drive.goToPoint import GoToPoint
+from commands.drive.aim_to_direction import AimToDirection
+from commands.drive.swerve_to_point import SwerveToPoint
+from commands.drive.go_to_point import GoToPoint
 
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpilib import SmartDashboard, DriverStation

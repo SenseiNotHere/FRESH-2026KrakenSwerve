@@ -1,89 +1,106 @@
 from commands2 import Subsystem
-from phoenix6.configs import (
-    TalonFXConfiguration,
-    Slot0Configs
+from rev import (
+    SparkMax,
+    SparkMaxConfig,
+    SparkLowLevel,
+    SparkBase,
+    ResetMode,
+    PersistMode
 )
-from phoenix6.hardware import TalonFX
-from phoenix6.controls import (
-    VelocityVoltage,
-    DutyCycleOut
-)
-from phoenix6.signals import (
-    NeutralModeValue,
-    InvertedValue
-)
+from wpilib import SmartDashboard, SendableChooser
 
 from constants.constants import IndexerConstants
 
+
 class Indexer(Subsystem):
-    def __init__(self, motorCANID: int, motorInverted: bool):
+    def __init__(
+        self,
+        motorCANID: int,
+        motorInverted: bool
+    ):
         super().__init__()
 
         # Motor Init
-        self.motor = TalonFX(motorCANID)
+        self.motor = SparkMax(motorCANID, SparkLowLevel.MotorType.kBrushless)
 
         # Motor config
-        indexerMotorConfig = TalonFXConfiguration()
-        indexerMotorConfig.motor_output.neutral_mode = NeutralModeValue.COAST
-        indexerMotorConfig.motor_output.inverted = (
-            InvertedValue.COUNTER_CLOCKWISE_POSITIVE
-            if motorInverted
-            else InvertedValue.CLOCKWISE_POSITIVE
+        config = SparkMaxConfig()
+        config.setIdleMode(SparkMaxConfig.IdleMode.kCoast)
+        config.inverted(motorInverted)
+
+        # PID config
+        config.closedLoop.P(IndexerConstants.kP)
+        config.closedLoop.I(0.0)
+        config.closedLoop.D(IndexerConstants.kD)
+        config.closedLoop.velocityFF(IndexerConstants.kFF)
+        config.closedLoop.outputRange(-1.0, 1.0)
+
+        self.motor.configure(
+            config,
+            ResetMode.kResetSafeParameters,
+            PersistMode.kPersistParameters
         )
-        self.motor.configurator.apply(indexerMotorConfig)
 
-        # Slot config
-        indexerSlotConfig = Slot0Configs()
-        indexerSlotConfig.k_p = IndexerConstants.kP
-        indexerSlotConfig.k_d = IndexerConstants.kD
-        indexerSlotConfig.k_v = IndexerConstants.kFF
-        self.motor.configurator.apply(indexerSlotConfig)
-
-        # Control requests
-        self.velocityRequest = VelocityVoltage(0.0).with_slot(0)
-        self.percentRequest = DutyCycleOut(0.0)
+        self.pidController = self.motor.getClosedLoopController()
 
         # State
-        self.targetRPS = 0.0
-        self.enabled = False
+        self._enabled = False
+        self._targetRPM: float | None = None
+        self._lastTargetRPM: float | None = None
 
-    def periodic(self):
-        if not self.enabled:
-            self.motor.set_control(self.percentRequest.with_output(0.0))
+        # Speed chooser
+        self.speedChooser = SendableChooser()
+        self.speedChooser.setDefaultOption("100%", 1.0)
+        self.speedChooser.addOption("90%", 0.9)
+        self.speedChooser.addOption("80%", 0.8)
+        self.speedChooser.addOption("70%", 0.7)
+        self.speedChooser.addOption("60%", 0.6)
+        self.speedChooser.addOption("50%", 0.5)
+        self.speedChooser.addOption("40%", 0.4)
+        self.speedChooser.addOption("30%", 0.3)
+        self.speedChooser.addOption("20%", 0.2)
+        self.speedChooser.addOption("10%", 0.1)
+        self.speedChooser.addOption("0%", 0.0)
+
+        SmartDashboard.putData("Indexer Speed", self.speedChooser)
+
+    # Periodic
+    def periodic(self) -> None:
+        if not self._enabled:
+            self._targetRPM = None
+            self._lastTargetRPM = None
+            self.motor.set(0.0)
             return
 
-        self.motor.set_control(
-            self.velocityRequest.with_velocity(self.targetRPS)
+        if self._targetRPM is not None:
+            if self._targetRPM != self._lastTargetRPM:
+                self.pidController.setReference(self._targetRPM, SparkBase.ControlType.kVelocity)
+                self._lastTargetRPM = self._targetRPM
+
+        SmartDashboard.putBoolean("Indexer Enabled", self._enabled)
+        SmartDashboard.putNumber(
+            "Indexer Target RPM",
+            self._targetRPM if self._targetRPM is not None else 0.0
         )
 
     # API
+    def enable(self) -> None:
+        self._enabled = True
+        scale = self.speedChooser.getSelected()
+        self._targetRPM = IndexerConstants.kFeedRPS * 60.0 * scale
 
-    def enable(self):
-        """
-        Starts the indexer motor at the configured feed speed.
-        """
-        self.enabled = True
-        self.targetRPS = IndexerConstants.kFeedRPS
+    def stop(self) -> None:
+        self._enabled = False
+        self._targetRPM = None
+        self.motor.set(0.0)
 
-    def stop(self):
-        """
-        Stops the indexer motor.
-        """
-        self.enabled = False
-        self.targetRPS = 0.0
-        self.motor.set_control(self.percentRequest.with_output(0.0))
-
-    def feedPercent(self, percent: float):
-        """
-        Sets the indexer motor to a constant percent output.
-        """
-        self.enabled = False
-        self.motor.set_control(
-            self.percentRequest.with_output(percent)
-        )
+    def feedPercent(self, percent: float) -> None:
+        self._enabled = False
+        self._targetRPM = None
+        self.motor.set(percent)
 
     def getMotors(self):
         """
-        :yields: The Talon FX controlling the climber motor.
+        :yields: The SparkMax controlling the indexer motor.
         """
         yield self.motor
