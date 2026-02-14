@@ -2,6 +2,8 @@
 
 FRC Team 1811’s 2026 competition robot codebase.
 
+WE'RE STILL COMING UP WITH A ROBOT NAME :P
+
 Fully state-driven.  
 Fully superstructured.  
 Fully locked in.
