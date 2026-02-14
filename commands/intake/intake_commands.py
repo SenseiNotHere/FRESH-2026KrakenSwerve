@@ -1,64 +1,46 @@
 from commands2 import Command
+from superstructure.superstructure import Superstructure
+from superstructure.robot_state import RobotState
 
 
 class RunIntake(Command):
 
-    def __init__(self, intake):
+    def __init__(self, superstructure: Superstructure):
         super().__init__()
-        self.intake = intake
-        self.addRequirements(intake)
+        self.superstructure = superstructure
 
     def initialize(self):
-        self.intake.intake()
+        self.superstructure.setState(RobotState.INTAKING)
 
     def end(self, interrupted: bool):
-        self.intake.stop()
+        self.superstructure.setState(RobotState.IDLE)
 
     def isFinished(self) -> bool:
         return False
 
 class ReverseIntake(Command):
 
-    def __init__(self, intake):
+    def __init__(self, superstructure: Superstructure):
         super().__init__()
-        self.intake = intake
-        self.addRequirements(intake)
+        self.superstructure = superstructure
+
+        if superstructure.hasIntake:
+            self.addRequirements(superstructure.intake)
+        if superstructure.hasIndexer:
+            self.addRequirements(superstructure.indexer)
 
     def initialize(self):
-        self.intake.reverse()
+        self.superstructure.setState(RobotState.IDLE)
+
+    def execute(self):
+        if self.superstructure.hasIntake:
+            self.superstructure.intake.reverse()
+
+        if self.superstructure.hasIndexer:
+            self.superstructure.indexer.reverse()
 
     def end(self, interrupted: bool):
-        self.intake.stop()
-
-    def isFinished(self):
-        return False
-
-class ToggleIntakeDeploy(Command):
-
-    def __init__(self, intake):
-        super().__init__()
-        self.intake = intake
-        self.addRequirements(intake)
-
-    def initialize(self):
-        self.intake.toggleDeploy()
-
-    def isFinished(self):
-        return True
-
-class DeployAndRunIntake(Command):
-
-    def __init__(self, intake):
-        super().__init__()
-        self.intake = intake
-        self.addRequirements(intake)
-
-    def initialize(self):
-        self.intake.deploy()
-        self.intake.intake()
-
-    def end(self, interrupted):
-        self.intake.stop()
+        self.superstructure.setState(RobotState.IDLE)
 
     def isFinished(self):
         return False

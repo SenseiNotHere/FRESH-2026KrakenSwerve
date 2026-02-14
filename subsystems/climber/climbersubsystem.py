@@ -15,11 +15,8 @@ from phoenix6.signals import (
     NeutralModeValue,
     InvertedValue,
     FeedbackSensorSourceValue,
-    SensorDirectionValue
-)
-from phoenix6.signals import (
+    SensorDirectionValue,
     ReverseLimitSourceValue,
-    ReverseLimitValue,
     ReverseLimitTypeValue
 )
 
@@ -43,7 +40,6 @@ class Climber(Subsystem):
         super().__init__()
 
         # Hardware
-
         self.motor = TalonFX(motorCANID)
         self.canCoder = CANcoder(canCoderCANID)
 
@@ -54,10 +50,8 @@ class Climber(Subsystem):
             reverseChannel=reverseChannel
         )
 
-        # CANcoder Config
-
+        # CANcoder config
         canCoderConfig = CANcoderConfiguration()
-
         if canCoderOffset is not None:
             canCoderConfig.magnet_sensor.magnet_offset = canCoderOffset
 
@@ -66,13 +60,10 @@ class Climber(Subsystem):
             if canCoderInverted
             else SensorDirectionValue.COUNTER_CLOCKWISE_POSITIVE
         )
-
         self.canCoder.configurator.apply(canCoderConfig)
 
-        # Motor Config
-
+        # Motor config
         motorConfig = TalonFXConfiguration()
-
         motorConfig.motor_output.neutral_mode = NeutralModeValue.BRAKE
         motorConfig.motor_output.inverted = (
             InvertedValue.CLOCKWISE_POSITIVE
@@ -80,17 +71,26 @@ class Climber(Subsystem):
             else InvertedValue.COUNTER_CLOCKWISE_POSITIVE
         )
 
-        motorConfig.feedback.feedback_sensor_source = FeedbackSensorSourceValue.FUSED_CANCODER
+        motorConfig.feedback.feedback_sensor_source = (
+            FeedbackSensorSourceValue.FUSED_CANCODER
+        )
         motorConfig.feedback.feedback_remote_sensor_id = canCoderCANID
+
         motorConfig.hardware_limit_switch.reverse_limit_enable = True
-        motorConfig.hardware_limit_switch.reverse_limit_source = ReverseLimitSourceValue.LIMIT_SWITCH_PIN
+        motorConfig.hardware_limit_switch.reverse_limit_source = (
+            ReverseLimitSourceValue.LIMIT_SWITCH_PIN
+        )
         motorConfig.hardware_limit_switch.reverse_limit_autoset_position_enable = True
-        motorConfig.hardware_limit_switch.reverse_limit_autoset_position_value = ClimberConstants.kMinPosition
-        motorConfig.hardware_limit_switch.reverse_limit_type = ReverseLimitTypeValue.NORMALLY_OPEN
+        motorConfig.hardware_limit_switch.reverse_limit_autoset_position_value = (
+            ClimberConstants.kMinPosition
+        )
+        motorConfig.hardware_limit_switch.reverse_limit_type = (
+            ReverseLimitTypeValue.NORMALLY_OPEN
+        )
+
         self.motor.configurator.apply(motorConfig)
 
         # PID / Feedforward
-
         slotConfig = Slot0Configs()
         (
             slotConfig
@@ -99,11 +99,9 @@ class Climber(Subsystem):
             .with_k_d(ClimberConstants.kD)
             .with_k_v(ClimberConstants.kFF)
         )
-
         self.motor.configurator.apply(slotConfig)
 
         # Current Limits
-
         currentLimits = CurrentLimitsConfigs()
         (
             currentLimits
@@ -112,34 +110,26 @@ class Climber(Subsystem):
             .with_stator_current_limit(ClimberConstants.kStatorCurrentLimit)
             .with_stator_current_limit_enable(True)
         )
-
         self.motor.configurator.apply(currentLimits)
-
-        # Control Request
 
         self.positionRequest = PositionVoltage(0).with_slot(0)
 
-        # Sync motor position to absolute
+        # Sync motor to absolute
         self.motor.set_position(self.getAbsolutePosition())
 
-        # State Variables
-
+        # State
         self.targetPosition: float = self.getRelativePosition()
         self.commandedActive: bool = False
 
         self.jamTimer: float = 0.0
         self.lastTime = Timer.getFPGATimestamp()
 
-        self.airbrakeEngaged: bool = False
+        self.airbrakeEngaged = True
         self.airbrake.set(DoubleSolenoid.Value.kReverse)
 
-        # Set climber to minimum position
-#        self.setPosition(ClimberConstants.kMinPosition)
-
-    # Periodic (Safety / Jam Detection)
+    # Periodic – Jam Detection
 
     def periodic(self):
-
         now = Timer.getFPGATimestamp()
         dt = now - self.lastTime
         self.lastTime = now
@@ -157,7 +147,6 @@ class Climber(Subsystem):
 
         moving = abs(velocity) > ClimberConstants.kVelocityDeadband
 
-        # Stall Detection
         if tryingToMove and not moving and current > ClimberConstants.kStallCurrent:
             self.jamTimer += dt
         else:
@@ -172,10 +161,9 @@ class Climber(Subsystem):
         SmartDashboard.putNumber("Climber/Position", position)
         SmartDashboard.putBoolean("Climber/Airbrake", self.airbrakeEngaged)
 
-    # Positioning
+    # Position Control
 
     def setPosition(self, pos: float):
-
         pos = max(
             ClimberConstants.kMinPosition,
             min(pos, ClimberConstants.kMaxPosition)
@@ -191,34 +179,24 @@ class Climber(Subsystem):
     def stop(self):
         self.commandedActive = False
         self.motor.set_control(
-            self.positionRequest.with_position(self.getRelativePosition())
+            self.positionRequest.with_position(
+                self.getRelativePosition()
+            )
         )
 
-    def toggle(self):
+    def atTarget(self) -> bool:
+        return abs(
+            self.targetPosition - self.getRelativePosition()
+        ) < ClimberConstants.kPositionDeadband
 
-        if self.getRelativePosition() < ClimberConstants.kClimbHeight:
-            self.setPosition(ClimberConstants.kClimbHeight)
-        else:
-            self.setPosition(ClimberConstants.kMinPosition)
+    # Manual Adjust
 
     def manualAdjust(self, joystickValue: float):
-
-        # Deadband
         if abs(joystickValue) < 0.1:
             return
 
-        # Scale speed (very important)
-        # This controls how fast it moves per second
-        speed = joystickValue * ClimberConstants.kManualSpeed  # rotations per second
-
-        # Increment target
-        newTarget = self.targetPosition + speed * 0.02  # 20ms loop
-
-        # Clamp
-        newTarget = max(
-            ClimberConstants.kMinPosition,
-            min(newTarget, ClimberConstants.kMaxPosition)
-        )
+        speed = joystickValue * ClimberConstants.kManualSpeed
+        newTarget = self.targetPosition + speed * 0.02
 
         self.setPosition(newTarget)
 
@@ -231,12 +209,6 @@ class Climber(Subsystem):
     def releaseAirbrake(self):
         self.airbrake.set(DoubleSolenoid.Value.kReverse)
         self.airbrakeEngaged = False
-
-    def toggleAirbrake(self):
-        if self.airbrakeEngaged:
-            self.releaseAirbrake()
-        else:
-            self.engageAirbrake()
 
     # Sensors
 

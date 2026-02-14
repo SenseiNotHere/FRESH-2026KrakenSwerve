@@ -1,21 +1,19 @@
-from typing import Optional
-
 from commands2 import FunctionalCommand
 
 from subsystems.shooter.shootersubsystem import Shooter
 from subsystems.shooter.shot_calculator import ShotCalculator
 from subsystems.intake.intakesubsystem import Intake
 from subsystems.climber.climbersubsystem import Climber
-from subsystems.intake.intakesubsystem import IntakeConstants
 from subsystems.shooter.indexersubsystem import Indexer
 from subsystems.vision.limelightcamera import LimelightCamera
 
 from .robot_state import RobotState, RobotReadiness
 
-from constants.constants import ShooterConstants, IndexerConstants, ClimberConstants
+from constants.constants import ClimberConstants
 
 
 class Superstructure:
+
     def __init__(
         self,
         drivetrain,
@@ -26,20 +24,27 @@ class Superstructure:
         climber: Climber | None = None,
         vision: LimelightCamera | None = None
     ):
-        # Subsystems
         self.drivetrain = drivetrain
+
         self.shooter = shooter
         self.indexer = indexer
         self.shotCalculator = shotCalculator
         self.intake = intake
         self.climber = climber
-        self.limelight = vision
+        self.vision = vision
 
-        # State
+        # Subsystem availability (safe for build season)
+        self.hasShooter = shooter is not None
+        self.hasIndexer = indexer is not None
+        self.hasShotCalc = shotCalculator is not None
+        self.hasIntake = intake is not None
+        self.hasClimber = climber is not None
+        self.hasVision = vision is not None
+
         self.robot_state = RobotState.IDLE
         self.robot_readiness = RobotReadiness()
 
-    # Main update loop
+    # Update Loop (Call from robotPeriodic)
 
     def update(self):
 
@@ -48,27 +53,46 @@ class Superstructure:
         if self.robot_state == RobotState.IDLE:
             self._handle_idle()
 
+        elif self.robot_state == RobotState.INTAKING:
+            self._handle_intaking()
+
         elif self.robot_state == RobotState.PREP_SHOT:
             self._handle_prep_shot()
 
         elif self.robot_state == RobotState.SHOOTING:
             self._handle_shooting()
 
+        elif self.robot_state == RobotState.CLIMB_AUTO:
+            self._handle_climb_auto()
+
+        elif self.robot_state == RobotState.CLIMB_MANUAL:
+            self._handle_climb_manual()
+
+    # Readiness
+
     def _update_readiness(self):
 
-        if ShooterConstants.kShooterEnabled:
-            self.robot_readiness.shooterReady = self.shooter.atSpeed(tolerance_rpm=150)
+        if self.hasShooter:
+            self.robot_readiness.shooterReady = (
+                self.shooter.atSpeed(tolerance_rpm=150)
+            )
+        else:
+            self.robot_readiness.shooterReady = False
 
-        if IndexerConstants.kIndexerEnabled:
-            self.robot_readiness.indexerReady = self.indexer.isReady()
+        if self.hasIntake:
+            self.robot_readiness.intakeDeployed = (
+                self.intake.isDeployed()
+            )
+        else:
+            self.robot_readiness.intakeDeployed = False
 
-        # canFeed depends on state + shooter speed
         self.robot_readiness.canFeed = (
-                self.robot_state == RobotState.SHOOTING
-                and self.robot_readiness.shooterReady
+            self.robot_state == RobotState.SHOOTING
+            and self.robot_readiness.shooterReady
+            and self.hasIndexer
         )
 
-    # State transitions (Public API)
+    # Public State API
 
     def createStateCommand(self, state: RobotState):
         return FunctionalCommand(
@@ -79,62 +103,119 @@ class Superstructure:
         )
 
     def setState(self, newState: RobotState):
+
+        if newState == self.robot_state:
+            return
+
+        # Safety: once climbing, only allow IDLE transition
+        if self.robot_state in [
+            RobotState.CLIMB_AUTO,
+            RobotState.CLIMB_MANUAL
+        ]:
+            if newState != RobotState.IDLE:
+                return
+
         self.robot_state = newState
 
-    # State handers
+        # One-time actions on state entry
+        if newState == RobotState.CLIMB_AUTO and self.hasClimber:
+            self.climber.releaseAirbrake()
+            self.climber.setPosition(
+                ClimberConstants.kClimbHeight
+            )
+
+    # State Handlers
 
     def _handle_idle(self):
-        self._stop_shooter_system()
 
+        self._stop_shooter()
+        self._stop_indexer()
+        self._stow_intake()
+
+    # Start intaking on entry, but keep handling to manage shooter and indexer states
+    def _handle_intaking(self):
+
+        self._stop_shooter()
+
+        if self.hasIntake:
+            self.intake.startIntaking()
+
+        if self.hasIndexer:
+            self.indexer.feed()
+
+    # Start prep on entry, but keep handling in case we need to adjust for vision
     def _handle_prep_shot(self):
-        if not ShooterConstants.kShooterEnabled or not self.shooter:
+
+        if not self.hasShooter:
             return
 
-        self._apply_shooter_speed()
-
-        # Never feed in prep
-        self._stop_feeder()
-
-    def _handle_shooting(self):
-        """
-        Spin up shooter and feed when ready.
-        """
-        if not ShooterConstants.kShooterEnabled or not self.shooter:
-            return
-
-        self._apply_shooter_speed()
-
-        if (
-            self.robot_readiness.shooterReady
-            and self.indexer
-            and IndexerConstants.kIndexerEnabled
-        ):
-            self.indexer.enable()
-        else:
-            self._stop_feeder()
-
-
-    # Helpers
-
-    def _stop_feeder(self):
-        if IndexerConstants.kIndexerEnabled:
-            self.indexer.disable()
-
-    def _stop_shooter_system(self):
-        if ShooterConstants.kShooterEnabled:
-            self.shooter.disable()
-        self._stop_feeder()
-
-    def _apply_shooter_speed(self):
-
-        if not self.shooter:
-            return
-
-        if ShooterConstants.kShotCalculatorEnabled and self.shotCalculator:
-            # Use distance-based RPS
+        # Spin up shooter
+        if self.hasShotCalc:
             target_rps = self.shotCalculator.getTargetSpeedRPS()
             self.shooter.setTargetRPS(target_rps)
         else:
-            # Use SmartDashboard chooser percent
-            percent = self.shooter.getDashboardPercent()
-            self.shooter.setPercent(percent)
+            self.shooter.useDashboardPercent()
+
+        # Hold note while spinning
+        if self.hasIndexer:
+            self.indexer.hold()
+
+    # Start shooting on entry, but keep handling to manage feeding and adjust shooter speed if needed
+    def _handle_shooting(self):
+
+        if not self.hasShooter:
+            return
+
+        # Keep spinning
+        if self.hasShotCalc:
+            target_rps = self.shotCalculator.getTargetSpeedRPS()
+            self.shooter.setTargetRPS(target_rps)
+        else:
+            self.shooter.useDashboardPercent()
+
+        # Feed only if ready
+        if (
+            self.hasIndexer
+            and self.robot_readiness.shooterReady
+        ):
+            self.indexer.feed()
+        elif self.hasIndexer:
+            self.indexer.hold()
+
+    # Start climb on entry, but keep handling to manage airbrake
+    def _handle_climb_auto(self):
+
+        self._stop_shooter()
+        self._stop_indexer()
+        self._stow_intake()
+
+        if not self.hasClimber:
+            return
+
+        if self.climber.atTarget():
+            self.climber.engageAirbrake()
+        else:
+            self.climber.releaseAirbrake()
+
+    # Start manual climb on entry, but keep handling to manage subsystems and airbrake
+    def _handle_climb_manual(self):
+
+        self._stop_shooter()
+        self._stop_indexer()
+        self._stow_intake()
+
+        # Manual joystick adjustment handled by command
+
+    # Helper Methods
+
+    def _stop_shooter(self):
+        if self.hasShooter:
+            self.shooter.stop()
+
+    def _stop_indexer(self):
+        if self.hasIndexer:
+            self.indexer.stop()
+
+    def _stow_intake(self):
+        if self.hasIntake:
+            self.intake.stow()

@@ -1,29 +1,49 @@
 from commands2 import Command
-from subsystems.climber.climbersubsystem import Climber
+from superstructure.superstructure import Superstructure
+from superstructure.robot_state import RobotState
 
-class ToggleClimber(Command):
-    def __init__(self, climber: Climber):
+
+class ToggleClimbAuto(Command):
+
+    def __init__(self, superstructure: Superstructure):
         super().__init__()
-        self.climber = climber
-        self.addRequirements(self.climber)
+        self.superstructure = superstructure
 
     def initialize(self):
-        self.climber.toggle()
+        # Toggle between IDLE and CLIMB_AUTO
+        if self.superstructure.robot_state == RobotState.CLIMB_AUTO:
+            self.superstructure.setState(RobotState.IDLE)
+        else:
+            self.superstructure.setState(RobotState.CLIMB_AUTO)
 
     def isFinished(self) -> bool:
         return True
 
 class ManualClimb(Command):
 
-    def __init__(self, climber, joystick):
+    def __init__(self, superstructure: Superstructure, joystick):
         super().__init__()
-        self.climber = climber
+        self.superstructure = superstructure
         self.ySupplier = joystick
-        self.addRequirements(climber)
+
+        # Only require climber subsystem
+        if superstructure.hasClimber:
+            self.addRequirements(superstructure.climber)
+
+    def initialize(self):
+        self.superstructure.setState(RobotState.CLIMB_MANUAL)
 
     def execute(self):
+
+        if not self.superstructure.hasClimber:
+            return
+
         value = -self.ySupplier()
-        self.climber.manualAdjust(value)
+
+        self.superstructure.climber.manualAdjust(value)
+
+    def end(self, interrupted: bool):
+        self.superstructure.setState(RobotState.IDLE)
 
     def isFinished(self):
         return False
