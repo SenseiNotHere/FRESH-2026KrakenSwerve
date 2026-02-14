@@ -7,19 +7,19 @@
 
 import typing
 import wpilib
-import commands2
+from commands2 import CommandScheduler, TimedCommandRobot, Command
 
 from robotcontainer import RobotContainer
 
 
-class MyRobot(commands2.TimedCommandRobot):
+class MyRobot(TimedCommandRobot):
     """
     Command v2 robots are encouraged to inherit from TimedCommandRobot, which
     has an implementation of robotPeriodic which runs the scheduler for you
     """
 
-    autonomousCommand: typing.Optional[commands2.Command] = None
-    testCommand: typing.Optional[commands2.Command] = None
+    autonomousCommand: typing.Optional[Command] = None
+    testCommand: typing.Optional[Command] = None
 
     def robotInit(self) -> None:
         """
@@ -59,9 +59,13 @@ class MyRobot(commands2.TimedCommandRobot):
     def teleopPeriodic(self) -> None:
         """This function is called periodically during operator control"""
 
+    def robotPeriodic(self) -> None:
+        super().robotPeriodic()  # runs scheduler
+        self.robotContainer.superstructure.update()
+
     def testInit(self) -> None:
         # Cancels all running subsystems at the start of test mode
-        commands2.CommandScheduler.getInstance().cancelAll()
+        CommandScheduler.getInstance().cancelAll()
         self.testCommand = self.robotContainer.getTestCommand()
 
         # schedule the autonomous command (example)

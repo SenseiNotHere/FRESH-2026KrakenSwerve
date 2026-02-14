@@ -21,12 +21,11 @@ class ToggleClimbAuto(Command):
 
 class ManualClimb(Command):
 
-    def __init__(self, superstructure: Superstructure, joystick):
+    def __init__(self, superstructure: Superstructure, joystickSupplier):
         super().__init__()
         self.superstructure = superstructure
-        self.ySupplier = joystick
+        self.joystickSupplier = joystickSupplier
 
-        # Only require climber subsystem
         if superstructure.hasClimber:
             self.addRequirements(superstructure.climber)
 
@@ -38,8 +37,7 @@ class ManualClimb(Command):
         if not self.superstructure.hasClimber:
             return
 
-        value = -self.ySupplier()
-
+        value = -self.joystickSupplier()
         self.superstructure.climber.manualAdjust(value)
 
     def end(self, interrupted: bool):

@@ -30,6 +30,9 @@ from subsystems.shooter.shot_calculator import ShotCalculator
 from subsystems.orchestra.orchestrasubsystem import OrchestraSubsystem
 from superstructure.superstructure import Superstructure
 from commands.drive.holonomic_drive import HolonomicDrive
+
+from commands.climber.climber_commands import ManualClimb
+
 from buttonbindings import ButtonBindings
 
 from constants.constants import (
@@ -217,6 +220,18 @@ class RobotContainer:
         )
 
         # Button Bindings
+
+        self.operatorController.axisGreaterThan(
+            XboxController.Axis.kRightY,
+            threshold=0.1
+        ).whileTrue(
+            ManualClimb(
+                self.superstructure,
+                lambda: self.operatorController.getRawAxis(
+                    XboxController.Axis.kRightY
+                )
+            )
+        )
 
         self.buttonBindings = ButtonBindings(self)
         self.buttonBindings.configureButtonBindings()

@@ -1,4 +1,5 @@
 from commands2 import FunctionalCommand
+from wpilib import SmartDashboard
 
 from subsystems.shooter.shootersubsystem import Shooter
 from subsystems.shooter.shot_calculator import ShotCalculator
@@ -48,18 +49,32 @@ class Superstructure:
 
     def update(self):
 
+        SmartDashboard.putString(
+            "Superstructure/State",
+            self.robot_state.name
+        )
+
         self._update_readiness()
 
         if self.robot_state == RobotState.IDLE:
             self._handle_idle()
 
-        elif self.robot_state == RobotState.INTAKING:
+        elif self.robot_state in [
+            RobotState.INTAKING,
+            RobotState.INTAKING_AUTONOMOUS
+        ]:
             self._handle_intaking()
 
-        elif self.robot_state == RobotState.PREP_SHOT:
+        elif self.robot_state in [
+            RobotState.PREP_SHOT,
+            RobotState.PREP_SHOT_AUTONOMOUS
+        ]:
             self._handle_prep_shot()
 
-        elif self.robot_state == RobotState.SHOOTING:
+        elif self.robot_state in [
+            RobotState.SHOOTING,
+            RobotState.SHOOTING_AUTONOMOUS
+        ]:
             self._handle_shooting()
 
         elif self.robot_state == RobotState.CLIMB_AUTO:
@@ -104,6 +119,7 @@ class Superstructure:
 
     def setState(self, newState: RobotState):
 
+        # No-op if same state
         if newState == self.robot_state:
             return
 
@@ -111,11 +127,19 @@ class Superstructure:
         if self.robot_state in [
             RobotState.CLIMB_AUTO,
             RobotState.CLIMB_MANUAL
-        ]:
-            if newState != RobotState.IDLE:
-                return
+        ] and newState != RobotState.IDLE:
+            return
 
+        oldState = self.robot_state
         self.robot_state = newState
+
+        # Log state transition
+        print(f"[Superstructure] {oldState.name} -> {newState.name}")
+
+        SmartDashboard.putString(
+            "Superstructure/State",
+            newState.name
+        )
 
         # One-time actions on state entry
         if newState == RobotState.CLIMB_AUTO and self.hasClimber:
