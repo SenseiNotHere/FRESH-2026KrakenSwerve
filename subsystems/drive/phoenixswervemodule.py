@@ -17,7 +17,7 @@ from phoenix6.signals import (
     InvertedValue,
     SensorDirectionValue,
 )
-from phoenix6.controls import VelocityVoltage, PositionVoltage
+from phoenix6.controls import VelocityVoltage, PositionVoltage, MotionMagicVelocityVoltage
 from phoenix6.orchestra import Orchestra
 
 from constants.constants import ModuleConstants
@@ -142,7 +142,7 @@ class PhoenixSwerveModule(Subsystem):
         self.turningMotor.configurator.apply(turnLimits)
 
         # Control Requests
-        self.velocityRequest = VelocityVoltage(0).with_slot(0)
+        self.velocityRequest = MotionMagicVelocityVoltage(0, acceleration=250).with_slot(0)
         self.positionRequest = PositionVoltage(0).with_slot(0)
 
         # Init State
