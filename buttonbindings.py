@@ -1,5 +1,5 @@
 from wpilib import XboxController, SmartDashboard
-from wpimath.geometry import Pose2d, Rotation2d
+from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from commands2 import InstantCommand
 
 from commands.climber.climber_commands import HoldAirbrake, ManualClimb, ToggleClimbAuto
@@ -111,6 +111,16 @@ class ButtonBindings:
             threshold=0.05
         ).whileTrue(driveToGamepiece)
 
+        # create a command for keeping the robot nose pointed 45 degrees (for traversing the hump on a swerve drive)
+        keepNoseAt45Degrees = PointTowardsLocation(
+            drivetrain=self.robotDrive,
+            location=Translation2d(x=999999, y=999999),  # if we want 50 degrees or 40 degrees, change the ratio of x/y
+            locationIfRed=Translation2d(x=-999999, y=-999999),
+        )
+        self.driverController.button(XboxController.Button.kRightBumper).whileTrue(keepNoseAt45Degrees)
+        # ^^ set up a condition for when to do this: do it when the joystick right trigger is pressed by more than 50%
+
+    def _log_and_get_april_tag_position(self, tag_id_callable, tag_id_name):
     # Operator Controls
 
     def _configureOperatorBindings(self):
