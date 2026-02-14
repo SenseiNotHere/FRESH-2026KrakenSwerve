@@ -22,7 +22,7 @@ class Pneumatics(Subsystem):
         self.compressor.disable()
 
     def isEnabled(self) -> bool:
-        return self.compressor.enabled()
+        return self.compressor.isEnabled()
 
     def periodic(self):
         SmartDashboard.putBoolean(

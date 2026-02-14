@@ -7,68 +7,66 @@ from constants.constants import ShooterConstants
 
 class ShotCalculator(Subsystem):
     """
-    Computes distance-based shooter speed and (optionally) effective target
-    for shot-on-the-fly. No hood assumed.
-
-    Credits to FRC team 868
+    Computes distance-based shooter speed and yaw.
+    Does NOT control shooter. Pure calculation subsystem.
     """
 
-    def __init__(
-            self,
-            drivetrain
-    ):
+    def __init__(self, drivetrain):
         super().__init__()
 
         self.drivetrain = drivetrain
 
-        # Target (static hub center)
         self.target_location: Pose3d = Hub.CENTER
 
-        # Outputs
-        self.target_distance: float = 0.0
-        self.target_speed_rps: float = 0.0
-
-        # Optional SOTM outputs
-        self.current_effective_target_pose: Pose3d = Hub.CENTER
-        self.current_effective_yaw: float = 0.0
+        # Computed outputs
+        self._target_distance: float = 0.0
+        self._target_speed_rps: float = 0.0
+        self._effective_target_pose: Pose3d = Hub.CENTER
+        self._effective_yaw: float = 0.0
 
     # Periodic
 
     def periodic(self):
-        """
-        Recompute target distance and shooter speed every loop.
-        """
 
         drivetrain_pose: Pose2d = self.drivetrain.getPose()
 
-        # Distance from robot to hub (2D)
-        self.target_distance = (
+        # 2D Distance
+        self._target_distance = (
             drivetrain_pose.translation()
             .distance(self.target_location.toPose2d().translation())
         )
 
-        # Distance -> shooter speed (RPS)
-        self.target_speed_rps = ShooterConstants.DISTANCE_TO_RPS.get(
-            self.target_distance
+        # Distance -> Speed Lookup
+        lookup = ShooterConstants.DISTANCE_TO_RPS
+
+        if hasattr(lookup, "get"):
+            # If it's an interpolating map
+            self._target_speed_rps = lookup.get(self._target_distance)
+        else:
+            # Fallback safety
+            self._target_speed_rps = 0.0
+
+        # Effective target (future SOTM logic goes here)
+        self._effective_target_pose = self.target_location
+
+        relative_pose = (
+            self.target_location
+            .toPose2d()
+            .relativeTo(drivetrain_pose)
         )
 
-        # For now, effective target == real target
-        self.current_effective_target_pose = self.target_location
-
-        # Optional yaw calc
-        relative_pose = self.target_location.toPose2d().relativeTo(drivetrain_pose)
-        self.current_effective_yaw = relative_pose.rotation().radians()
+        self._effective_yaw = relative_pose.rotation().radians()
 
     # Public API
 
     def getTargetDistance(self) -> float:
-        return self.target_distance
+        return self._target_distance
 
     def getTargetSpeedRPS(self) -> float:
-        return self.target_speed_rps
+        return self._target_speed_rps
 
-    def getCurrentEffectiveTargetPose(self) -> Pose3d:
-        return self.current_effective_target_pose
+    def getEffectiveTargetPose(self) -> Pose3d:
+        return self._effective_target_pose
 
-    def getCurrentEffectiveYaw(self) -> float:
-        return self.current_effective_yaw
+    def getEffectiveYaw(self) -> float:
+        return self._effective_yaw

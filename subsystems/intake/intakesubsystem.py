@@ -43,7 +43,6 @@ class Intake(Subsystem):
         config.setIdleMode(SparkMaxConfig.IdleMode.kCoast)
         config.inverted(motorInverted)
 
-        # Closed Loop
         config.closedLoop.P(IntakeConstants.kP)
         config.closedLoop.I(0.0)
         config.closedLoop.D(IntakeConstants.kD)
@@ -58,7 +57,7 @@ class Intake(Subsystem):
 
         self.pid = self.motor.getClosedLoopController()
 
-        # Pneumatics (Deploy)
+        # Pneumatics
 
         self.deploySolenoid = DoubleSolenoid(
             module=solenoidModuleID,
@@ -67,8 +66,8 @@ class Intake(Subsystem):
             reverseChannel=reverseChannel
         )
 
-        self.deployed = False
-        self.retract()  # Start safe
+        self._deployed = False
+        self._setDeployed(False)  # Start safe
 
         # State
 
@@ -96,19 +95,23 @@ class Intake(Subsystem):
                 SparkBase.ControlType.kVelocity
             )
 
-        SmartDashboard.putBoolean("Intake/Deployed", self.deployed)
+        SmartDashboard.putBoolean("Intake/Deployed", self._deployed)
         SmartDashboard.putNumber(
             "Intake/Target RPM",
             self._targetRPM if self._targetRPM else 0.0
         )
 
-    # Motor Control
+    # High-Level API (Superstructure Calls These)
 
-    def intake(self):
+    def startIntaking(self):
+        self._setDeployed(True)
+
         scale = self.speedChooser.getSelected()
         self._targetRPM = IntakeConstants.kIntakeRPS * 60.0 * scale
 
     def reverse(self):
+        self._setDeployed(True)
+
         scale = self.speedChooser.getSelected()
         self._targetRPM = -IntakeConstants.kIntakeRPS * 60.0 * scale
 
@@ -116,18 +119,21 @@ class Intake(Subsystem):
         self._targetRPM = None
         self.motor.set(0.0)
 
-    # Pneumatics
+    def stow(self):
+        self.stop()
+        self._setDeployed(False)
 
-    def deploy(self):
-        self.deploySolenoid.set(DoubleSolenoid.Value.kForward)
-        self.deployed = True
+    # Internal Deploy Control
 
-    def retract(self):
-        self.deploySolenoid.set(DoubleSolenoid.Value.kReverse)
-        self.deployed = False
-
-    def toggleDeploy(self):
-        if self.deployed:
-            self.retract()
+    def _setDeployed(self, deployed: bool):
+        if deployed:
+            self.deploySolenoid.set(DoubleSolenoid.Value.kForward)
         else:
-            self.deploy()
+            self.deploySolenoid.set(DoubleSolenoid.Value.kReverse)
+
+        self._deployed = deployed
+
+    # State Queries
+
+    def isDeployed(self) -> bool:
+        return self._deployed

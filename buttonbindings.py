@@ -2,6 +2,8 @@ from wpilib import XboxController, SmartDashboard
 from wpimath.geometry import Pose2d, Rotation2d
 from commands2 import InstantCommand
 
+from commands.climber.climber_commands import HoldAirbrake, ManualClimb, ToggleClimbAuto
+from commands.intake.intake_commands import DeployAndRunIntake, ReverseIntake
 from superstructure.robot_state import RobotState
 
 from constants.constants import *
@@ -10,11 +12,7 @@ from constants.field_constants import AprilTags
 from commands.drive.reset_xy import ResetXY, ResetSwerveFront
 from commands.auto.drive_torwards_object import SwerveTowardsObject
 from commands.drive.point_torwards_location import PointTowardsLocation
-from commands.climber.climber_commands import ToggleClimber
 from commands.vision.limelight_comands import SetCameraPipeline
-from commands.climber.climber_commands import ToggleClimber
-from commands.shooter.shoot_index_commands import ShootWithIndexer
-from commands.shooter.shooter_commands import RunShooter
 
 
 class ButtonBindings:
@@ -24,16 +22,11 @@ class ButtonBindings:
 
         # Core subsystems
         self.robotDrive = robot_container.robotDrive
-#       self.superstructure = robot_container.superstructure
+        self.superstructure = robot_container.superstructure
         self.driverController = robot_container.driverController
         self.operatorController = robot_container.operatorController
         self.limelight = robot_container.limelight
         self.orchestra = robot_container.orchestra
-
-        # Optional subsystems
-        self.shooter = getattr(robot_container, "shooter", None)
-        self.indexer = getattr(robot_container, "indexer", None)
-        self.climber = getattr(robot_container, "climber", None)
 
     # Main Binding Configuration
 
@@ -64,50 +57,39 @@ class ButtonBindings:
             InstantCommand(self.robotDrive.setX, self.robotDrive)
         )
 
-        # Climber
-
-        if ClimberConstants.kClimberEnabled:
-            self.driverController.button(
-                XboxController.Button.kB
-            ).onTrue(ToggleClimber(self.robotContainer.climber))
-
-        # Point Toward AprilTag
+        # Prep Shot (A Button)
 
         self.driverController.button(
             XboxController.Button.kA
         ).whileTrue(
-            PointTowardsLocation(
-                drivetrain=self.robotDrive,
-                location=lambda: self._get_apriltag_position(
-                    self.limelight.getAprilTagID,
-                    "getAprilTagID"
-                ),
-                locationIfRed=lambda: self._get_apriltag_position(
-                    self.limelight.getRedAprilTagID,
-                    "getRedAprilTagID"
-                )
+            self.superstructure.createStateCommand(
+                RobotState.PREP_SHOT
             )
         )
 
-        xButton = self.driverController.button(XboxController.Button.kX)
+        # Intake (B Button)
 
-        # Shooter only
-        if ShooterConstants.kShooterEnabled and not IndexerConstants.kIndexerEnabled:
-            xButton.whileTrue(RunShooter(self.shooter))
-
-        # Shooter + Indexer
-        elif ShooterConstants.kShooterEnabled and IndexerConstants.kIndexerEnabled:
-            xButton.whileTrue(
-                ShootWithIndexer(
-                    self.shooter,
-                    self.indexer,
-                    tolerance_rpm=100.0  # adjust as needed
-                )
+        self.driverController.button(
+            XboxController.Button.kB
+        ).whileTrue(
+            self.superstructure.createStateCommand(
+                RobotState.INTAKING
             )
+        )
 
-#        xButton.whileTrue(
-#           self.superstructure.createStateCommand(RobotState.SHOOTING)
-#       )
+        # Climb Auto (Left Bumper)
+        self.driverController.button(
+            XboxController.Button.kLeftBumper
+        ).onTrue(
+            ToggleClimbAuto(self.robotContainer.superstructure)
+        )
+
+        # Engage Airbrakes (Right Bumper)
+        self.driverController.button(
+            XboxController.Button.kRightBumper
+        ).whileTrue(
+                HoldAirbrake(self.robotContainer.climber)
+        )
 
         # Swerve Toward Gamepiece
 
@@ -133,26 +115,18 @@ class ButtonBindings:
 
     def _configureOperatorBindings(self):
 
-        operatorX = self.operatorController.button(XboxController.Button.kX)
-        operatorX.whileTrue(InstantCommand(lambda: ToggleClimber(self.climber)))
-
-        operatorA = self.operatorController.button(
-            XboxController.Button.kA
+        # Deploy and Run Intake (Right Bumper)
+        self.operatorController.button(
+            XboxController.Button.kRightBumper
+        ).whileTrue(
+            DeployAndRunIntake(self.robotContainer.superstructure)
         )
 
-        operatorA.whileTrue(
-            SetCameraPipeline(
-                camera=self.limelight,
-                pipelineIndex=1
-            ).andThen(
-                SwerveTowardsObject(
-                    camera=self.limelight,
-                    drivetrain=self.robotDrive,
-                    speed=lambda: 0.5
-                ).withTimeout(5)
-            ).andThen(
-                ToggleClimber(self.robotContainer.climber)
-            )
+        # Run intake in reverse (Left Bumper)
+        self.operatorController.button(
+            XboxController.Button.kLeftBumper
+        ).whileTrue(
+            ReverseIntake(self.robotContainer.superstructure)
         )
 
     # Helpers

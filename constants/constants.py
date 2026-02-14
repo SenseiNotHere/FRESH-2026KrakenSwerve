@@ -292,6 +292,8 @@ class ClimberConstants:
     kStatorCurrentLimit = 60
     kSupplyCurrentLimit = 40
 
+    kManualRPS = 0.5
+
 class TrenchAssistConstants:
 
     kTrenchAssistEnabled = False
