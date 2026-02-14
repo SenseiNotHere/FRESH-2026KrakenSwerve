@@ -3,7 +3,7 @@ from typing import Optional
 from commands2 import Subsystem
 from wpilib import DoubleSolenoid, PneumaticsModuleType, SmartDashboard, Timer
 
-from phoenix6.controls import PositionVoltage
+from phoenix6.controls import PositionVoltage, VelocityVoltage
 from phoenix6.hardware import TalonFX, CANcoder
 from phoenix6.configs import (
     TalonFXConfiguration,
@@ -113,6 +113,7 @@ class Climber(Subsystem):
         self.motor.configurator.apply(currentLimits)
 
         self.positionRequest = PositionVoltage(0).with_slot(0)
+        self.velocityRequest = VelocityVoltage(0).with_slot(0)
 
         # Sync motor to absolute
         self.motor.set_position(self.getAbsolutePosition())
@@ -124,7 +125,7 @@ class Climber(Subsystem):
         self.jamTimer: float = 0.0
         self.lastTime = Timer.getFPGATimestamp()
 
-        self.airbrakeEngaged = True
+        self.airbrakeEngaged = False
         self.airbrake.set(DoubleSolenoid.Value.kReverse)
 
     # Periodic – Jam Detection
@@ -164,6 +165,10 @@ class Climber(Subsystem):
     # Position Control
 
     def setPosition(self, pos: float):
+
+        if self.airbrakeEngaged:
+            return  # Do not allow movement while brake engaged
+
         pos = max(
             ClimberConstants.kMinPosition,
             min(pos, ClimberConstants.kMaxPosition)
@@ -176,6 +181,7 @@ class Climber(Subsystem):
             self.positionRequest.with_position(pos)
         )
 
+
     def stop(self):
         self.commandedActive = False
         self.motor.set_control(
@@ -185,20 +191,38 @@ class Climber(Subsystem):
         )
 
     def atTarget(self) -> bool:
-        return abs(
+        position_error = abs(
             self.targetPosition - self.getRelativePosition()
-        ) < ClimberConstants.kPositionDeadband
+        )
+
+        velocity = abs(self.motor.get_velocity().value)
+
+        return (
+            position_error < ClimberConstants.kPositionDeadband
+            and velocity < ClimberConstants.kVelocityDeadband
+        )
 
     # Manual Adjust
 
-    def manualAdjust(self, joystickValue: float):
-        if abs(joystickValue) < 0.1:
+    def manualVelocity(self, joystickValue: float):
+
+        deadband = 0.1
+
+        if abs(joystickValue) < deadband:
+            self.stop()
             return
 
-        speed = joystickValue * ClimberConstants.kManualSpeed
-        newTarget = self.targetPosition + speed * 0.02
+        # Release brake automatically in manual
+        if self.airbrakeEngaged:
+            self.releaseAirbrake()
 
-        self.setPosition(newTarget)
+        # Closed-loop velocity control
+        target_rps = joystickValue * ClimberConstants.kManualRPS
+
+        self.commandedActive = True
+        self.motor.set_control(
+            self.velocityRequest.with_velocity(target_rps)
+        )
 
     # Airbrake
 

@@ -52,14 +52,17 @@ class Indexer(Subsystem):
         self._lastTargetRPM: float | None = None
 
         # Speed chooser
-        self.speedChooser = SendableChooser()
-        self.speedChooser.setDefaultOption("100%", 1.0)
-        self.speedChooser.addOption("75%", 0.75)
-        self.speedChooser.addOption("50%", 0.5)
-        self.speedChooser.addOption("25%", 0.25)
-        self.speedChooser.addOption("0%", 0.0)
+        speedChooserEnabled = False
 
-        SmartDashboard.putData("Indexer Speed", self.speedChooser)
+        if speedChooserEnabled:
+            self.speedChooser = SendableChooser()
+            self.speedChooser.setDefaultOption("100%", 1.0)
+            self.speedChooser.addOption("75%", 0.75)
+            self.speedChooser.addOption("50%", 0.5)
+            self.speedChooser.addOption("25%", 0.25)
+            self.speedChooser.addOption("0%", 0.0)
+
+            SmartDashboard.putData("Indexer Speed", self.speedChooser)
 
     # Periodic
 
@@ -84,16 +87,12 @@ class Indexer(Subsystem):
     # High-Level API (Superstructure Calls These)
 
     def feed(self):
-        scale = self.speedChooser.getSelected()
+        scale = self.speedChooser.getSelected() if hasattr(self, "speedChooser") else 0.5
         self._targetRPM = IndexerConstants.kFeedRPS * 60.0 * scale
 
     def reverse(self):
-        scale = self.speedChooser.getSelected()
+        scale = self.speedChooser.getSelected() if hasattr(self, "speedChooser") else 0.5
         self._targetRPM = -IndexerConstants.kFeedRPS * 60.0 * scale
-
-    def hold(self):
-        # Very low speed just to prevent rollback
-        self._targetRPM = IndexerConstants.kHoldRPS * 60.0
 
     def stop(self):
         self._targetRPM = None

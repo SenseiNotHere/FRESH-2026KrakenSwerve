@@ -77,11 +77,22 @@ class Superstructure:
         ]:
             self._handle_shooting()
 
-        elif self.robot_state == RobotState.CLIMB_AUTO:
-            self._handle_climb_auto()
-
+        elif self.robot_state in [
+            RobotState.ELEVATOR_RISING,
+            RobotState.ELEVATOR_LOWERING,
+            RobotState.AIRBREAK_ENGAGED_UP,
+            RobotState.AIRBREAK_ENGAGED_DOWN
+        ]:
+            self._handle_elevator_states()
+        
         elif self.robot_state == RobotState.CLIMB_MANUAL:
             self._handle_climb_manual()
+        
+        elif self.robot_state in [
+            RobotState.INTAKE_DEPLOYED,
+            RobotState.INTAKE_RETRACTED
+        ]:
+            self._handle_intake_position()
 
     # Readiness
 
@@ -101,8 +112,18 @@ class Superstructure:
         else:
             self.robot_readiness.intakeDeployed = False
 
+        if self.hasClimber:
+            self.robot_readiness.elevatorAtTarget = (
+                self.climber.atTarget()
+            )
+        else:
+            self.robot_readiness.elevatorAtTarget = False
+
         self.robot_readiness.canFeed = (
-            self.robot_state == RobotState.SHOOTING
+            self.robot_state in [
+                RobotState.SHOOTING,
+                RobotState.SHOOTING_AUTONOMOUS
+            ]
             and self.robot_readiness.shooterReady
             and self.hasIndexer
         )
@@ -123,13 +144,6 @@ class Superstructure:
         if newState == self.robot_state:
             return
 
-        # Safety: once climbing, only allow IDLE transition
-        if self.robot_state in [
-            RobotState.CLIMB_AUTO,
-            RobotState.CLIMB_MANUAL
-        ] and newState != RobotState.IDLE:
-            return
-
         oldState = self.robot_state
         self.robot_state = newState
 
@@ -140,21 +154,14 @@ class Superstructure:
             "Superstructure/State",
             newState.name
         )
-
-        # One-time actions on state entry
-        if newState == RobotState.CLIMB_AUTO and self.hasClimber:
-            self.climber.releaseAirbrake()
-            self.climber.setPosition(
-                ClimberConstants.kClimbHeight
-            )
-
+        
     # State Handlers
 
+    # Handles idle state by ensuring all subsystems are stopped.
     def _handle_idle(self):
 
         self._stop_shooter()
         self._stop_indexer()
-        self._stow_intake()
 
     # Start intaking on entry, but keep handling to manage shooter and indexer states
     def _handle_intaking(self):
@@ -182,7 +189,10 @@ class Superstructure:
 
         # Hold note while spinning
         if self.hasIndexer:
-            self.indexer.hold()
+            self.indexer.stop()
+        
+        if self.robot_readiness.shooterReady:
+            self.setState(RobotState.SHOOTING)
 
     # Start shooting on entry, but keep handling to manage feeding and adjust shooter speed if needed
     def _handle_shooting(self):
@@ -204,10 +214,10 @@ class Superstructure:
         ):
             self.indexer.feed()
         elif self.hasIndexer:
-            self.indexer.hold()
+            self.indexer.stop()
 
-    # Start climb on entry, but keep handling to manage airbrake
-    def _handle_climb_auto(self):
+    # Start elevator movement on entry, but keep handling to manage subsystems and airbrake
+    def _handle_elevator_states(self):
 
         self._stop_shooter()
         self._stop_indexer()
@@ -216,19 +226,59 @@ class Superstructure:
         if not self.hasClimber:
             return
 
-        if self.climber.atTarget():
-            self.climber.engageAirbrake()
-        else:
-            self.climber.releaseAirbrake()
+        state = self.robot_state
 
-    # Start manual climb on entry, but keep handling to manage subsystems and airbrake
+        # Elevator Rising
+        if state == RobotState.ELEVATOR_RISING:
+            self.climber.releaseAirbrake()
+            self.climber.setPosition(ClimberConstants.kClimbHeight)
+
+            if self.robot_readiness.elevatorAtTarget:
+                self.climber.engageAirbrake()
+                self.setState(RobotState.AIRBREAK_ENGAGED_UP)
+
+        # Elevator Lowering
+        elif state == RobotState.ELEVATOR_LOWERING:
+            self.climber.releaseAirbrake()
+            self.climber.setPosition(ClimberConstants.kMinPosition)
+
+            if self.robot_readiness.elevatorAtTarget:
+                self.setState(RobotState.IDLE)
+
+        # Brake engaged up
+        elif state == RobotState.AIRBREAK_ENGAGED_UP:
+            self.climber.engageAirbrake()
+
+        # Brake engaged down (debug only)
+        elif state == RobotState.AIRBREAK_ENGAGED_DOWN:
+            self.climber.engageAirbrake()
+
+
     def _handle_climb_manual(self):
 
+        # Disable other mechanisms
         self._stop_shooter()
         self._stop_indexer()
         self._stow_intake()
 
-        # Manual joystick adjustment handled by command
+        # DO NOT auto engage brake here.
+        # ManualClimb command controls brake + movement.
+    
+    # Starts intake deployment/retraction on entry, but keeps handling to manage shooter/indexer states and ensure we return to IDLE after action is done
+    def _handle_intake_position(self):
+
+        if not self.hasIntake:
+            return
+
+        if self.robot_state == RobotState.INTAKE_DEPLOYED:
+            self.intake.deploy()
+
+        elif self.robot_state == RobotState.INTAKE_RETRACTED:
+            self.intake.stow()
+
+        # After executing, go back to IDLE
+        self.setState(RobotState.IDLE)
+
 
     # Helper Methods
 

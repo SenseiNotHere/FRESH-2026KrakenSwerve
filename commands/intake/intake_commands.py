@@ -44,3 +44,49 @@ class ReverseIntake(Command):
 
     def isFinished(self):
         return False
+
+class DeployAndRunIntake(Command):
+
+    def __init__(self, superstructure: Superstructure):
+        super().__init__()
+        self.superstructure = superstructure
+
+    def initialize(self):
+
+        if not self.superstructure.hasIntake:
+            return
+
+        # Deploy if not already deployed
+        if not self.superstructure.intake.isDeployed():
+            self.superstructure.intake.deploy()
+
+        # Switch to INTAKING state
+        self.superstructure.setState(RobotState.INTAKING)
+
+    def end(self, interrupted: bool):
+        self.superstructure.setState(RobotState.IDLE)
+
+    def isFinished(self):
+        return False
+    
+class DeployRetractIntake(Command):
+
+    def __init__(self, superstructure: Superstructure):
+        super().__init__()
+        self.superstructure = superstructure
+
+    def initialize(self):
+        if not self.superstructure.hasIntake:
+            return
+
+        # Deploy if not already deployed
+        if not self.superstructure.intake.isDeployed():
+            self.superstructure.intake.deploy()
+        else:
+            self.superstructure.intake.retract()
+
+    def end(self, interrupted: bool):
+        self.superstructure.setState(RobotState.IDLE)
+
+    def isFinished(self):
+        return True

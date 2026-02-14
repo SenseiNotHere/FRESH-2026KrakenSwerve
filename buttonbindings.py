@@ -2,6 +2,8 @@ from wpilib import XboxController, SmartDashboard
 from wpimath.geometry import Pose2d, Rotation2d
 from commands2 import InstantCommand
 
+from commands.climber.climber_commands import HoldAirbrake, ManualClimb, ToggleClimbAuto
+from commands.intake.intake_commands import DeployAndRunIntake, ReverseIntake
 from superstructure.robot_state import RobotState
 
 from constants.constants import *
@@ -55,16 +57,6 @@ class ButtonBindings:
             InstantCommand(self.robotDrive.setX, self.robotDrive)
         )
 
-        # Auto Shoot (X Button)
-
-        self.driverController.button(
-            XboxController.Button.kX
-        ).whileTrue(
-            self.superstructure.createStateCommand(
-                RobotState.SHOOTING
-            )
-        )
-
         # Prep Shot (A Button)
 
         self.driverController.button(
@@ -85,16 +77,18 @@ class ButtonBindings:
             )
         )
 
-        # Climb Auto (Y Button)
-
+        # Climb Auto (Left Bumper)
         self.driverController.button(
-            XboxController.Button.kY
+            XboxController.Button.kLeftBumper
         ).onTrue(
-            InstantCommand(
-                lambda: self.superstructure.setState(
-                    RobotState.CLIMB_AUTO
-                )
-            )
+            ToggleClimbAuto(self.robotContainer.superstructure)
+        )
+
+        # Engage Airbrakes (Right Bumper)
+        self.driverController.button(
+            XboxController.Button.kRightBumper
+        ).whileTrue(
+                HoldAirbrake(self.robotContainer.climber)
         )
 
         # Swerve Toward Gamepiece
@@ -121,33 +115,18 @@ class ButtonBindings:
 
     def _configureOperatorBindings(self):
 
-        # Manual Climb (Left Stick Press example)
-
+        # Deploy and Run Intake (Right Bumper)
         self.operatorController.button(
-            XboxController.Button.kLeftStick
+            XboxController.Button.kRightBumper
         ).whileTrue(
-            InstantCommand(
-                lambda: self.superstructure.setState(
-                    RobotState.CLIMB_MANUAL
-                )
-            )
+            DeployAndRunIntake(self.robotContainer.superstructure)
         )
 
-        # Vision Assisted Climb Sequence Example
-
+        # Run intake in reverse (Left Bumper)
         self.operatorController.button(
-            XboxController.Button.kA
+            XboxController.Button.kLeftBumper
         ).whileTrue(
-            SetCameraPipeline(
-                camera=self.limelight,
-                pipelineIndex=1
-            ).andThen(
-                SwerveTowardsObject(
-                    camera=self.limelight,
-                    drivetrain=self.robotDrive,
-                    speed=lambda: 0.5
-                ).withTimeout(5)
-            )
+            ReverseIntake(self.robotContainer.superstructure)
         )
 
     # Helpers

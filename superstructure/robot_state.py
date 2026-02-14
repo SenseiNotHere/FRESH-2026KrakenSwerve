@@ -3,24 +3,43 @@ from enum import Enum
 
 
 class RobotState(Enum):
-    # TODO: Add more states as needed
-    # Teleop states
-    IDLE = 0
-    INTAKING = 1
-    PREP_SHOT = 2
-    SHOOTING = 3
-    CLIMB_AUTO = 4
-    CLIMB_MANUAL = 5
 
-    # Autonomous states
-    CLIMBER_DOWN_AUTONOMOUS = 6
-    CLIMBER_UP_AUTONOMOUS = 7
-    PREP_SHOT_AUTONOMOUS = 8
-    INTAKING_AUTONOMOUS = 9
-    SHOOTING_AUTONOMOUS = 10
+    # General / Neutral States
+    IDLE = 0
+
+    # Intake States (Teleop)
+    INTAKING = 1
+    INTAKE_DEPLOYED = 2
+    INTAKE_RETRACTED = 3
+
+    # Shooter States (Teleop)
+    PREP_SHOT = 4
+    SHOOTING = 5
+    FOLLOWING_HUB_SHOOT = 6   # Follow hub and shoot
+
+    # Climber States (Teleop)
+    CLIMB_MANUAL = 7
+    AIRBREAK_ENGAGED_UP = 8
+    AIRBREAK_ENGAGED_DOWN = 9
+
+    # Elevator States (Teleop)
+    ELEVATOR_RISING = 10
+    ELEVATOR_LOWERING = 11
+
+    # Drivetrain States (Teleop)
+    APPROACHING_OUTPOST = 12
+    APPROACHING_TOWER = 13
+
+    # Autonomous States
+    CLIMBER_DOWN_AUTONOMOUS = 20
+    CLIMBER_UP_AUTONOMOUS = 21
+    PREP_SHOT_AUTONOMOUS = 22
+    INTAKING_AUTONOMOUS = 23
+    SHOOTING_AUTONOMOUS = 24
 
 @dataclass
 class RobotReadiness:
     shooterReady: bool = False
     intakeDeployed: bool = False
     canFeed: bool = False
+    elevatorAtTarget: bool = False

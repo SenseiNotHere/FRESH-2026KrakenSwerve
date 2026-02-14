@@ -166,14 +166,14 @@ class RobotContainer:
         if ShooterConstants.kShooterEnabled:
             self.shooter = Shooter(
                 motorCANID=ShooterConstants.kShooterMotorID,
-                motorInverted=False,
+                motorInverted=True,
             )
 
         self.indexer = None
         if IndexerConstants.kIndexerEnabled:
             self.indexer = Indexer(
                 motorCANID=IndexerConstants.kIndexerMotorID,
-                motorInverted=False,
+                motorInverted=True,
             )
 
         self.intake = None
@@ -205,8 +205,7 @@ class RobotContainer:
         self.orchestra = OrchestraSubsystem(
             driveSubsystem=self.robotDrive
         )
-
-        # 
+ 
         # Superstructure (MUST BE LAST)
 
         self.superstructure = Superstructure(
@@ -221,14 +220,11 @@ class RobotContainer:
 
         # Button Bindings
 
-        self.operatorController.axisGreaterThan(
-            XboxController.Axis.kRightY,
-            threshold=0.1
-        ).whileTrue(
+        self.climber.setDefaultCommand(
             ManualClimb(
                 self.superstructure,
                 lambda: self.operatorController.getRawAxis(
-                    XboxController.Axis.kRightY
+                    XboxController.Axis.kLeftY
                 )
             )
         )
