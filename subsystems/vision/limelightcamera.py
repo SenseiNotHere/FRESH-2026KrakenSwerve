@@ -1,15 +1,20 @@
+
 #
 # Copyright (c) FIRST and other WPILib contributors.
 # Open Source Software; you can modify and/or share it under the terms of
 # the WPILib BSD license file in the root directory of this project.
 #
+from typing import Tuple
 
-from wpilib import Timer, SmartDashboard
+from wpilib import Timer, RobotController
 from commands2 import Subsystem
-from ntcore import NetworkTableInstance
+from ntcore import NetworkTableInstance, StringPublisher, StringArrayPublisher
+from wpimath.geometry import Rotation2d
+from wpinet import PortForwarder
+
 
 class LimelightCamera(Subsystem):
-    def __init__(self, cameraName: str) -> None:
+    def __init__(self, cameraName: str, isUsb0=False) -> None:
         super().__init__()
 
         self.cameraName = _fix_name(cameraName)
@@ -34,7 +39,35 @@ class LimelightCamera(Subsystem):
         self.heartbeating = False
         self.ticked = False
 
+        self.takingSnapshotsWhenNoDetection = 0.0
+        self.snapshotRequest = self.table.getIntegerTopic("snapshot").publish()
+        self.snapshotRequestValue = self.table.getIntegerTopic("snapshot").getEntry(0).get()
+        self.lastSnapshotRequestTime = 0.0
+
+        # localizer state
         self.localizerSubscribed = False
+        self.cameraPoseSetRequest, self.robotOrientationSetRequest, self.imuModeRequest = None, None, None
+
+        # port forwarding and feed address overrides, in case this camera is connected over USB
+        self.isUsb0 = isUsb0
+        self.ntSource: StringPublisher | None = None
+        self.ntStreams: StringArrayPublisher | None = None
+        self.ntStreamsValue, self.ntSourceValue = None, None
+        if isUsb0:
+            self.setupCameraAtUsb0(instance)
+
+
+    def setupCameraAtUsb0(self, instance: NetworkTableInstance | None):
+        for port in [1180, 5800, 5801, 5802, 5803, 5804, 5805, 5806, 5807, 5808, 5809]:
+            PortForwarder.getInstance().add(port, "172.29.0.1", port)
+        teamNumber = RobotController.getTeamNumber()
+        feedUrl = f"http://10.{teamNumber // 100}.{teamNumber // 100}.2:5800"
+        publishedStreamInfo = instance.getTable("CameraPublisher").getSubTable(self.cameraName)
+        self.ntStreams = publishedStreamInfo.getStringArrayTopic("streams").publish()
+        self.ntStreamsValue = [f"mjpeg:{feedUrl}"]
+        self.ntSource = publishedStreamInfo.getStringTopic("source").publish()
+        self.ntSourceValue = f"ip:{feedUrl}"
+
 
     def addLocalizer(self):
         if self.localizerSubscribed:
@@ -55,6 +88,7 @@ class LimelightCamera(Subsystem):
 
     def setPipeline(self, index: int):
         self.pipelineIndexRequest.set(float(index))
+        self.heartbeating = False  # wait until the next heartbeat before saying self.haveDetection == true
 
     def getPipeline(self) -> int:
         return int(self.pipelineIndex.get(-1))
@@ -79,6 +113,11 @@ class LimelightCamera(Subsystem):
         return Timer.getFPGATimestamp() - self.lastHeartbeatTime
 
     def periodic(self) -> None:
+        if self.isUsb0:
+            # keep overriding the feed info with the forwarded camera feed address
+            self.ntStreams.set(self.ntStreamsValue)
+            self.ntSource.set(self.ntSourceValue)
+
         now = Timer.getFPGATimestamp()
         heartbeat = self.getHB()
         self.ticked = False
@@ -90,6 +129,18 @@ class LimelightCamera(Subsystem):
         if heartbeating != self.heartbeating:
             print(f"Camera {self.cameraName} is " + ("UPDATING" if heartbeating else "NO LONGER UPDATING"))
         self.heartbeating = heartbeating
+
+        if heartbeating and self.takingSnapshotsWhenNoDetection and not self.hasDetection():
+            if now > self.lastSnapshotRequestTime + self.takingSnapshotsWhenNoDetection:
+                self.snapshotRequestValue += 1
+                self.snapshotRequest.set(self.snapshotRequestValue)
+                self.lastSnapshotRequestTime = now + self.takingSnapshotsWhenNoDetection
+
+    def startTakingSnapshotsWhenNoDetection(self, secondsBetweenSnapshots=1.0):
+        self.takingSnapshotsWhenNoDetection = secondsBetweenSnapshots
+
+    def stopTakingSnapshotsWhenNoDetection(self):
+        self.takingSnapshotsWhenNoDetection = 0.0
 
     def setPiPMode(self, mode: int):
         """
