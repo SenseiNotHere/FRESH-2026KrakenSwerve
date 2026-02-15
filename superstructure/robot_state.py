@@ -7,29 +7,30 @@ class RobotState(Enum):
     # General / Neutral States
     IDLE = 0
     PLAYING_SONG = 1
+    PLAYING_CHAMPIONSHIP_SONG = 2
 
     # Intake States (Teleop)
-    INTAKING = 2
-    INTAKE_DEPLOYED = 3
-    INTAKE_RETRACTED = 4
+    INTAKING = 3
+    INTAKE_DEPLOYED = 4
+    INTAKE_RETRACTED = 5
 
     # Shooter States (Teleop)
-    PREP_SHOT = 5
-    SHOOTING = 6
-    FOLLOWING_HUB_SHOOT = 7   # Follow hub and shoot
+    PREP_SHOT = 6
+    SHOOTING = 7
+    FOLLOWING_HUB_SHOOT = 8   # Follow hub and shoot
 
     # Climber States (Teleop)
-    CLIMB_MANUAL = 8
-    AIRBREAK_ENGAGED_UP = 9
-    AIRBREAK_ENGAGED_DOWN = 10
+    CLIMB_MANUAL = 9
+    AIRBREAK_ENGAGED_UP = 10
+    AIRBREAK_ENGAGED_DOWN = 11
 
     # Elevator States (Teleop)
-    ELEVATOR_RISING = 11
-    ELEVATOR_LOWERING = 12
+    ELEVATOR_RISING = 12
+    ELEVATOR_LOWERING = 13
 
     # Drivetrain States (Teleop)
-    APPROACHING_OUTPOST = 13
-    APPROACHING_TOWER = 14
+    APPROACHING_OUTPOST = 14
+    APPROACHING_TOWER = 15
 
     # Autonomous States
     CLIMBER_DOWN_AUTONOMOUS = 20

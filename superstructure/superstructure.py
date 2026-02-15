@@ -101,6 +101,9 @@ class Superstructure:
         elif self.robot_state == RobotState.PLAYING_SONG:
             self._handle_playing_song()
 
+        elif self.robot_state == RobotState.PLAYING_CHAMPIONSHIP_SONG:
+            self._handle_playing_championship_song()
+            
 
         # Ensure we stop music if we leave the song state
         if self.robot_state != RobotState.PLAYING_SONG:
@@ -266,7 +269,7 @@ class Superstructure:
         elif state == RobotState.AIRBREAK_ENGAGED_DOWN:
             self.climber.engageAirbrake()
 
-
+    # Start manual climb on entry
     def _handle_climb_manual(self):
 
         # Disable other mechanisms
@@ -296,6 +299,10 @@ class Superstructure:
     def _handle_playing_song(self):
 
         self.orchestraSubsystem.play_selected_song()
+
+    # Start championship song on entry
+    def _handle_playing_championship_song(self):
+        self.orchestra.play_championship_song()
 
     # Helper Methods
 

@@ -17,6 +17,10 @@ class OrchestraSubsystem(Subsystem):
 
         self._orchestra = Orchestra()
         self._current_song: Optional[str] = None
+        self._championship_mode = False
+        self._championship_song_path = (
+            "/home/lvuser/py/deploy/files/WinnerSong.chrp"
+        )
 
         # Register motors
         for subsystem in (
@@ -110,6 +114,22 @@ class OrchestraSubsystem(Subsystem):
 
         if not self._orchestra.is_playing():
             self._orchestra.play()
+
+    def play_championship_song(self):
+
+        if not self._championship_enabled:
+            print("[Orchestra] Championship mode not enabled.")
+            return
+
+        path = self._championship_song_path
+
+        if self._current_song != path:
+            self._orchestra.load_music(path)
+            self._current_song = path
+
+        if not self._orchestra.is_playing():
+            self._orchestra.play()
+
 
     def stop(self):
         self._orchestra.stop()
