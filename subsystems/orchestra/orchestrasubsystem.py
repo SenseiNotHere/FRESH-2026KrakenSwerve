@@ -74,6 +74,26 @@ class OrchestraSubsystem(Subsystem):
             "/home/lvuser/py/deploy/files/TitiMePregunto.chrp"
         )
 
+        self._song_chooser.addOption(
+            "Stateside - PinkPantheress",
+            "/home/lvuser/py/deploy/files/Stateside.chrp"
+        )
+
+        self._song_chooser.addOption(
+            "Despacito - Luis Fonsi",
+            "/home/lvuser/py/deploy/files/Despacito.chrp"
+        )
+
+        self._song_chooser.addOption(
+            "Beauty and A Beat - Justin Bieber",
+            "/home/lvuser/py/deploy/files/BeautyAndABeat.chrp"
+        )
+
+        self._song_chooser.addOption(
+            "Downtown - Anitta",
+            "/home/lvuser/py/deploy/files/Downtown.chrp"
+        )
+
         SmartDashboard.putData("Song Selection", self._song_chooser)
 
     # Public API
