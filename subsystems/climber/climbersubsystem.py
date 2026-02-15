@@ -153,13 +153,59 @@ class Climber(Subsystem):
         else:
             self.jamTimer = 0.0
 
+        # Diagnostics
+
+        reverseLimit = self.motor.get_reverse_limit().value == 1
+
+        atSoftMin = position <= ClimberConstants.kMinPosition + 0.01
+        atSoftMax = position >= ClimberConstants.kMaxPosition - 0.01
+
+        SmartDashboard.putNumber("Climber/Position", position)
+        SmartDashboard.putNumber("Climber/TargetPosition", self.targetPosition)
+        SmartDashboard.putNumber("Climber/PositionError", positionError)
+
+        SmartDashboard.putNumber("Climber/Velocity", velocity)
+        SmartDashboard.putNumber("Climber/StatorCurrent", current)
+        SmartDashboard.putNumber(
+            "Climber/SupplyCurrent",
+            self.motor.get_supply_current().value
+        )
+
+        SmartDashboard.putBoolean("Climber/CommandedActive", self.commandedActive)
+        SmartDashboard.putBoolean("Climber/AtTarget", self.atTarget())
+
+        SmartDashboard.putBoolean("Climber/ReverseLimit", reverseLimit)
+        SmartDashboard.putBoolean("Climber/AtSoftMin", atSoftMin)
+        SmartDashboard.putBoolean("Climber/AtSoftMax", atSoftMax)
+
+        SmartDashboard.putBoolean("Climber/AirbrakeEngaged", self.airbrakeEngaged)
+        SmartDashboard.putNumber("Climber/JamTimer", self.jamTimer)
+
+        # Jam Status
         if self.jamTimer > ClimberConstants.kStallTime:
             self.stop()
             SmartDashboard.putBoolean("Climber/Jammed", True)
         else:
             SmartDashboard.putBoolean("Climber/Jammed", False)
 
-        SmartDashboard.putNumber("Climber/Position", position)
+        # Why Not Moving Debug
+        reason = "OK"
+
+        if self.airbrakeEngaged:
+            reason = "Airbrake Engaged"
+        elif reverseLimit:
+            reason = "Reverse Limit Switch"
+        elif atSoftMin:
+            reason = "Soft Min Limit"
+        elif atSoftMax:
+            reason = "Soft Max Limit"
+        elif not self.commandedActive:
+            reason = "Not Commanded"
+        elif abs(velocity) < ClimberConstants.kVelocityDeadband:
+            reason = "Velocity Deadband"
+
+        SmartDashboard.putString("Climber/WhyNotMoving", reason)
+
         SmartDashboard.putBoolean("Climber/Airbrake", self.airbrakeEngaged)
 
     # Position Control
@@ -241,3 +287,7 @@ class Climber(Subsystem):
 
     def getAbsolutePosition(self) -> float:
         return self.canCoder.get_absolute_position().value
+    
+    # Motors
+    def getMotors(self):
+        yield self.motor

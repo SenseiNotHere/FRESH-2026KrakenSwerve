@@ -121,7 +121,17 @@ class ButtonBindings:
         # ^^ set up a condition for when to do this: do it when the joystick right trigger is pressed by more than 50%
 
     def _log_and_get_april_tag_position(self, tag_id_callable, tag_id_name):
-    # Operator Controls
+        tag_id = tag_id_callable()
+        SmartDashboard.putString(
+            f"command/c{self.__class__.__name__}/{tag_id_name}",
+            f"Tag ID: {tag_id}"
+        )
+        position = AprilTags.APRIL_TAG_POSITIONS.get(tag_id)
+        SmartDashboard.putString(
+            f"command/c{self.__class__.__name__}/{tag_id_name}_position",
+            f"Position: {position}"
+        )
+        return position    # Operator Controls
 
     def _configureOperatorBindings(self):
 

@@ -120,3 +120,7 @@ class Shooter(Subsystem):
 
     def isSpinning(self) -> bool:
         return self._targetRPS is not None
+    
+    # Motors
+    def getMotors(self):
+        yield self.motor
