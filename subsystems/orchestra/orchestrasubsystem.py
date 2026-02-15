@@ -2,51 +2,97 @@ from typing import Optional
 
 from commands2 import Subsystem
 from phoenix6.orchestra import Orchestra
+from wpilib import SendableChooser, SmartDashboard
+
 
 class OrchestraSubsystem(Subsystem):
+
     def __init__(
         self,
         driveSubsystem,
         climberSubsystem: Optional[Subsystem] = None,
-        indexerSubsystem: Optional[Subsystem] = None,
-        intakeSubsystem: Optional[Subsystem] = None,
         shooterSubsystem: Optional[Subsystem] = None,
     ):
         super().__init__()
 
-        self.orchestra = Orchestra()
+        self._orchestra = Orchestra()
+        self._current_song: Optional[str] = None
 
-        # Register all motors ONCE
+        # Register motors
         for subsystem in (
             driveSubsystem,
             climberSubsystem,
-            indexerSubsystem,
-            intakeSubsystem,
             shooterSubsystem,
         ):
-
             if subsystem is None:
                 continue
 
             for motor in subsystem.getMotors():
-                self.orchestra.add_instrument(motor)
+                self._orchestra.add_instrument(motor)
 
-    # Orchestra Controls
+        # Song Chooser
 
-    def loadSound(self, path: str):
-        """
-        Loads a .chrp music file into the orchestra.
-        """
-        self.orchestra.load_music(path)
+        self._song_chooser = SendableChooser()
 
-    def playSound(self):
-        """
-        Starts playing the loaded song.
-        """
-        self.orchestra.play()
+        self._song_chooser.setDefaultOption(
+            "Bloodline - Ariana Grande",
+            "/home/lvuser/py/deploy/files/Bloodline.chrp"
+        )
 
-    def stopSound(self):
-        """
-        Stops music playback.
-        """
-        self.orchestra.stop()
+        self._song_chooser.addOption(
+            "Yes And? - Ariana Grande",
+            "/home/lvuser/py/deploy/files/Yesand.chrp"
+        )
+
+        self._song_chooser.addOption(
+            "Lavender Town",
+            "/home/lvuser/py/deploy/files/LavenderTown.chrp"
+        )
+
+        self._song_chooser.addOption(
+            "Espresso - Sabrina Carpenter",
+            "/home/lvuser/py/deploy/files/Espresso.chrp"
+        )
+
+        self._song_chooser.addOption(
+            "Needy - Ariana Grande",
+            "/home/lvuser/py/deploy/files/Needy.chrp"
+        )
+
+        self._song_chooser.addOption(
+            "Dandelion - Ariana Grande",
+            "/home/lvuser/py/deploy/files/Dandelion.chrp"
+        )
+
+        self._song_chooser.addOption(
+            "When Did You Get Hot - Sabrina Carpenter",
+            "/home/lvuser/py/deploy/files/WhenDidYouGetHot.chrp"
+        )
+
+        self._song_chooser.addOption(
+            "Tití Me Preguntó - Bad Bunny",
+            "/home/lvuser/py/deploy/files/TitiMePregunto.chrp"
+        )
+
+        SmartDashboard.putData("Song Selection", self._song_chooser)
+
+    # Public API
+
+    def play_selected_song(self):
+        path = self._song_chooser.getSelected()
+
+        if path is None:
+            return
+
+        if self._current_song != path:
+            self._orchestra.load_music(path)
+            self._current_song = path
+
+        if not self._orchestra.is_playing():
+            self._orchestra.play()
+
+    def stop(self):
+        self._orchestra.stop()
+
+    def is_playing(self) -> bool:
+        return self._orchestra.is_playing()

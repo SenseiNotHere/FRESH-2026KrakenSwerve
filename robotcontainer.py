@@ -71,31 +71,6 @@ class RobotContainer:
         self.autoChooser = AutoBuilder.buildAutoChooser()
         SmartDashboard.putData("Auto Chooser", self.autoChooser)
 
-        # Song Chooser
-
-        self.songChooser = SendableChooser()
-        self.songChooser.setDefaultOption(
-            "Bloodline - Ariana Grande",
-            "/home/lvuser/py/deploy/files/Bloodline.chrp",
-        )
-        self.songChooser.addOption(
-            "Yes And? - Ariana Grande",
-            "/home/lvuser/py/deploy/files/Yesand.chrp",
-        )
-        self.songChooser.addOption(
-            "Lavender Town",
-            "/home/lvuser/py/deploy/files/LavenderTown.chrp",
-        )
-        self.songChooser.addOption(
-            "Espresso - Sabrina Carpenter",
-            "/home/lvuser/py/deploy/files/Espresso.chrp",
-        )
-        self.songChooser.addOption(
-            "Needy - Ariana Grande",
-            "/home/lvuser/py/deploy/files/Needy.chrp",
-        )
-        SmartDashboard.putData("Song Selection", self.songChooser)
-
         # Controllers
 
         self.driverController = CommandGenericHID(
@@ -203,7 +178,9 @@ class RobotContainer:
         # Orchestra
 
         self.orchestra = OrchestraSubsystem(
-            driveSubsystem=self.robotDrive
+            self.robotDrive,
+            self.climber,
+            self.shooter,
         )
  
         # Superstructure (MUST BE LAST)
@@ -215,7 +192,8 @@ class RobotContainer:
             shotCalculator=self.shotCalculator,
             intake=self.intake,
             climber=self.climber,
-            vision=self.limelight
+            vision=self.limelight,
+            orchestra=self.orchestra
         )
 
         # Button Bindings

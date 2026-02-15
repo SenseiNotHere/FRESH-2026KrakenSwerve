@@ -7,6 +7,8 @@ from subsystems.intake.intakesubsystem import Intake
 from subsystems.climber.climbersubsystem import Climber
 from subsystems.shooter.indexersubsystem import Indexer
 from subsystems.vision.limelightcamera import LimelightCamera
+from subsystems.drive.drivesubsystem import DriveSubsystem
+from subsystems.orchestra.orchestrasubsystem import OrchestraSubsystem
 
 from .robot_state import RobotState, RobotReadiness
 
@@ -17,22 +19,23 @@ class Superstructure:
 
     def __init__(
         self,
-        drivetrain,
+        drivetrain: DriveSubsystem | None = None,
         shooter: Shooter | None = None,
         indexer: Indexer | None = None,
         shotCalculator: ShotCalculator | None = None,
         intake: Intake | None = None,
         climber: Climber | None = None,
-        vision: LimelightCamera | None = None
+        vision: LimelightCamera | None = None,
+        orchestra: OrchestraSubsystem | None = None
     ):
         self.drivetrain = drivetrain
-
         self.shooter = shooter
         self.indexer = indexer
         self.shotCalculator = shotCalculator
         self.intake = intake
         self.climber = climber
         self.vision = vision
+        self.orchestra = orchestra
 
         # Subsystem availability (safe for build season)
         self.hasShooter = shooter is not None
@@ -41,6 +44,7 @@ class Superstructure:
         self.hasIntake = intake is not None
         self.hasClimber = climber is not None
         self.hasVision = vision is not None
+        self.hasOrchestra = orchestra is not None
 
         self.robot_state = RobotState.IDLE
         self.robot_readiness = RobotReadiness()
@@ -93,6 +97,14 @@ class Superstructure:
             RobotState.INTAKE_RETRACTED
         ]:
             self._handle_intake_position()
+        
+        elif self.robot_state == RobotState.PLAYING_SONG:
+            self._handle_playing_song()
+
+
+        # Ensure we stop music if we leave the song state
+        if self.robot_state != RobotState.PLAYING_SONG:
+            self.orchestra.stop()
 
     # Readiness
 
@@ -162,6 +174,7 @@ class Superstructure:
 
         self._stop_shooter()
         self._stop_indexer()
+        self.orchestra.stop()
 
     # Start intaking on entry, but keep handling to manage shooter and indexer states
     def _handle_intaking(self):
@@ -279,6 +292,10 @@ class Superstructure:
         # After executing, go back to IDLE
         self.setState(RobotState.IDLE)
 
+    # Start song on entry
+    def _handle_playing_song(self):
+
+        self.orchestraSubsystem.play_selected_song()
 
     # Helper Methods
 
