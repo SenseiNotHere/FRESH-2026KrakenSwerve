@@ -256,7 +256,7 @@ CHRPs are in:
     deploy/files
 
 Yes, the robot can sing.  
-Yes, it ikely will be Ariana Grande.  
+Yes, it likely will be Ariana Grande.  
 Yes, that’s intentional.
 
 ---
