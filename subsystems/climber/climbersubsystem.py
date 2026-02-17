@@ -41,6 +41,8 @@ class Climber(Subsystem):
 
         # Hardware
         self.motor = TalonFX(motorCANID)
+        self.motor.clear_sticky_faults()
+
         self.canCoder = CANcoder(canCoderCANID)
 
         self.airbrake = DoubleSolenoid(
