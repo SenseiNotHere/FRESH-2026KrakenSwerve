@@ -296,7 +296,6 @@ If it feels like a hack, it probably is.
 
 - Run simulation before deploying.
 - Verify motor directions after mechanical changes.
-- Confirm Phoenix Pro configuration before enabling.
 
 The robot moves fast.  
 Mistakes move faster.
@@ -307,6 +306,7 @@ Keep it readable.
 Keep it intentional.  
 Keep it elite.
 
+NOTE: Yes, drivetrainsubsystem.py and phoenixswervemodule.py are very NOT readable and friendly, but if I touch it, it breaks <3 If it works, don't touch it right...
 ---
 
 Architecture first.  
