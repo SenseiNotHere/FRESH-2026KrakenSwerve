@@ -36,6 +36,7 @@ class Shooter(Subsystem):
         (
             slot0
             .with_k_p(ShooterConstants.kP)
+            .with_k_i(ShooterConstants.kI)
             .with_k_d(ShooterConstants.kD)
             .with_k_v(ShooterConstants.kFF)
         )
@@ -116,7 +117,7 @@ class Shooter(Subsystem):
         target_rpm = self._targetRPS * 60.0
         current_rpm = self.motor.get_velocity().value * 60.0
 
-        return current_rpm >= (target_rpm - tolerance_rpm)
+        return abs(current_rpm - target_rpm) <= tolerance_rpm
 
     def isSpinning(self) -> bool:
         return self._targetRPS is not None

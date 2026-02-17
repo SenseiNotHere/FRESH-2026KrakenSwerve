@@ -22,7 +22,6 @@ class Indexer(Subsystem):
         super().__init__()
 
         # Motor Setup
-
         self.motor = SparkMax(
             motorCANID,
             SparkLowLevel.MotorType.kBrushless
@@ -46,12 +45,10 @@ class Indexer(Subsystem):
 
         self.pid = self.motor.getClosedLoopController()
 
-        # State
-
+        # Internal state
         self._targetRPM: float | None = None
-        self._lastTargetRPM: float | None = None
 
-        # Speed chooser
+        # Optional speed chooser (disabled by default)
         speedChooserEnabled = False
 
         if speedChooserEnabled:
@@ -69,22 +66,21 @@ class Indexer(Subsystem):
     def periodic(self):
 
         if self._targetRPM is None:
+            # Ensure motor fully stopped
             self.motor.set(0.0)
-            return
-
-        if self._targetRPM != self._lastTargetRPM:
+        else:
+            # Always re-command velocity
             self.pid.setReference(
                 self._targetRPM,
                 SparkBase.ControlType.kVelocity
             )
-            self._lastTargetRPM = self._targetRPM
 
         SmartDashboard.putNumber(
             "Indexer/Target RPM",
             self._targetRPM if self._targetRPM else 0.0
         )
 
-    # High-Level API (Superstructure Calls These)
+    # High-Level API
 
     def feed(self):
         scale = self.speedChooser.getSelected() if hasattr(self, "speedChooser") else 0.5
@@ -98,7 +94,7 @@ class Indexer(Subsystem):
         self._targetRPM = None
         self.motor.set(0.0)
 
-    # Optional Helpers
+    # Optional Helper
 
     def isRunning(self) -> bool:
         return self._targetRPM is not None

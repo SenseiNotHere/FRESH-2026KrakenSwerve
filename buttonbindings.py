@@ -149,6 +149,18 @@ class ButtonBindings:
             ReverseIntake(self.robotContainer.superstructure)
         )
 
+        # Deploy intake (X Button)
+        xButton = self.operatorController.button(XboxController.Button.kX)
+        xButton.whileTrue(self.superstructure.createStateCommand(
+            RobotState.INTAKE_DEPLOYED
+        ))
+
+        # Retract intake (Y Button)
+        yButton = self.operatorController.button(XboxController.Button.kY)
+        yButton.whileTrue(self.superstructure.createStateCommand(
+            RobotState.INTAKE_RETRACTED
+        ))
+
     # Helpers
 
     def _get_apriltag_position(self, tag_id_callable, tag_name):

@@ -135,34 +135,26 @@ class RobotContainer:
             moduleType=PneumaticsConstants.kModuleType
         )
 
-        # Optional Subsystems
+        # Subsystems
 
-        self.shooter = None
-        if ShooterConstants.kShooterEnabled:
-            self.shooter = Shooter(
-                motorCANID=ShooterConstants.kShooterMotorID,
-                motorInverted=True,
-            )
+        self.shooter = Shooter(
+            motorCANID=ShooterConstants.kShooterMotorID,
+            motorInverted=True,
+        )
 
-        self.indexer = None
-        if IndexerConstants.kIndexerEnabled:
-            self.indexer = Indexer(
-                motorCANID=IndexerConstants.kIndexerMotorID,
-                motorInverted=True,
-            )
+        self.indexer = Indexer(
+            motorCANID=IndexerConstants.kIndexerMotorID,
+            motorInverted=True,
+        )
 
-        self.intake = None
-        if IntakeConstants.kIntakeEnabled:
-            self.intake = Intake(
-                motorCANID=IntakeConstants.kIntakeMotorCANID,
-                motorInverted=False,
-                solenoidModuleID=IntakeConstants.kSolenoidModuleID,
-                pneumaticsModuleType=IntakeConstants.kPneumaticsModuleType,
-                forwardChannel=IntakeConstants.kSolenoidForwardChannel,
-                reverseChannel=IntakeConstants.kSolenoidReverseChannel
-            )
-
-        # Climber (always built for now)
+        self.intake = Intake(
+            motorCANID=IntakeConstants.kIntakeMotorCANID,
+            motorInverted=False,
+            solenoidModuleID=IntakeConstants.kSolenoidModuleID,
+            pneumaticsModuleType=IntakeConstants.kPneumaticsModuleType,
+            forwardChannel=IntakeConstants.kSolenoidForwardChannel,
+            reverseChannel=IntakeConstants.kSolenoidReverseChannel
+        )
 
         self.climber = Climber(
             motorCANID=ClimberConstants.kMotorID,
@@ -174,8 +166,6 @@ class RobotContainer:
             canCoderCANID=ClimberConstants.kCanCoderCANID,
             canCoderInverted=False
         )
-
-        # Orchestra
 
         self.orchestra = OrchestraSubsystem(
             self.robotDrive,
@@ -198,14 +188,22 @@ class RobotContainer:
 
         # Button Bindings
 
-        self.climber.setDefaultCommand(
-            ManualClimb(
-                self.superstructure,
-                lambda: self.operatorController.getRawAxis(
-                    XboxController.Axis.kLeftY
-                )
+        manual = ManualClimb(
+            self.superstructure,
+            lambda: self.operatorController.getRawAxis(
+                XboxController.Axis.kLeftY
             )
         )
+
+        # Down (positive values)
+        self.operatorController.axisGreaterThan(
+            XboxController.Axis.kLeftY, 0.1
+        ).whileTrue(manual)
+
+        # Up (negative values)
+        self.operatorController.axisLessThan(
+            XboxController.Axis.kLeftY, -0.1
+        ).whileTrue(manual)
 
         self.buttonBindings = ButtonBindings(self)
         self.buttonBindings.configureButtonBindings()

@@ -119,6 +119,9 @@ class Intake(Subsystem):
         self._targetRPM = None
         self.motor.set(0.0)
 
+    def deploy(self):
+        self._setDeployed(True)
+
     def stow(self):
         self.stop()
         self._setDeployed(False)

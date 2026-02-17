@@ -209,7 +209,6 @@ class AutoConstants:
 
 class ShooterConstants:
 
-    kShooterEnabled = True
     kShooterMotorID = 9
 
     kMinRPM = 600
@@ -217,6 +216,7 @@ class ShooterConstants:
 
     kFF = 0.12
     kP = 0.2
+    kI = 0.0001
     kD = 0.0
 
     kShooterSupplyLimit = 40
@@ -235,7 +235,6 @@ class PneumaticsConstants:
 
 class IntakeConstants:
 
-    kIntakeEnabled = False
     kIntakeMotorCANID = 1
 
     kIntakeRPS = 20.0
@@ -251,7 +250,6 @@ class IntakeConstants:
 
 class IndexerConstants:
 
-    kIndexerEnabled = True
     kIndexerMotorID = 2
 
     kMaxRPS = 40.0
@@ -263,8 +261,6 @@ class IndexerConstants:
 
 class ClimberConstants:
 
-    kClimberEnabled = True
-
     kMotorID = 10
     kMotorInverted = False
     kCanCoderCANID = 5
@@ -274,9 +270,9 @@ class ClimberConstants:
     kForwardChannel = 3
     kReverseChannel = 4
 
-    kMaxPosition = -2.0
-    kMinPosition = -5.8
-    kClimbHeight = 10.0
+    kMaxPosition = 0
+    kMinPosition = -1
+    kClimbHeight = 0.4
     kHeightTolerance = 0.01
     kPositionDeadband = 0.01
     kVelocityDeadband = 1.0

@@ -9,6 +9,8 @@ class ShotCalculator(Subsystem):
     """
     Computes distance-based shooter speed and yaw.
     Does NOT control shooter. Pure calculation subsystem.
+
+    Credits to FRC Team 868 - TechHOUNDS
     """
 
     def __init__(self, drivetrain):
@@ -38,13 +40,7 @@ class ShotCalculator(Subsystem):
 
         # Distance -> Speed Lookup
         lookup = ShooterConstants.DISTANCE_TO_RPS
-
-        if hasattr(lookup, "get"):
-            # If it's an interpolating map
-            self._target_speed_rps = lookup.get(self._target_distance)
-        else:
-            # Fallback safety
-            self._target_speed_rps = 0.0
+        self._target_speed_rps = lookup.get(self._target_distance)
 
         # Effective target (future SOTM logic goes here)
         self._effective_target_pose = self.target_location

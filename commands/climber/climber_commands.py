@@ -35,20 +35,21 @@ class ManualClimb(Command):
         if superstructure.hasClimber:
             self.addRequirements(superstructure.climber)
 
-    def initialize(self):
-        self.superstructure.setState(RobotState.CLIMB_MANUAL)
-
     def execute(self):
-
-        if not self.superstructure.hasClimber:
-            return
 
         value = -self.joystickSupplier()
 
-        # If joystick active ensure brake released
         if abs(value) > 0.1:
-            self.superstructure.climber.releaseAirbrake()
+            if self.superstructure.robot_state != RobotState.CLIMB_MANUAL:
+                self.superstructure.setState(RobotState.CLIMB_MANUAL)
+
             self.superstructure.climber.manualVelocity(value)
+
+        else:
+            if self.superstructure.robot_state == RobotState.CLIMB_MANUAL:
+                self.superstructure.setState(RobotState.IDLE)
+
+            self.superstructure.climber.stop()
 
     def end(self, interrupted: bool):
 

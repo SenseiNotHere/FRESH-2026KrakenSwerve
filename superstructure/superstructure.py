@@ -1,5 +1,5 @@
 from commands2 import FunctionalCommand
-from wpilib import SmartDashboard
+from wpilib import SmartDashboard, Timer
 
 from subsystems.shooter.shootersubsystem import Shooter
 from subsystems.shooter.shot_calculator import ShotCalculator
@@ -37,7 +37,7 @@ class Superstructure:
         self.vision = vision
         self.orchestra = orchestra
 
-        # Subsystem availability (safe for build season)
+        # Subsystems
         self.hasShooter = shooter is not None
         self.hasIndexer = indexer is not None
         self.hasShotCalc = shotCalculator is not None
@@ -49,7 +49,10 @@ class Superstructure:
         self.robot_state = RobotState.IDLE
         self.robot_readiness = RobotReadiness()
 
-    # Update Loop (Call from robotPeriodic)
+        # Shooter readiness debounce
+        self._shooter_ready_since = None
+
+    # Update Loop
 
     def update(self):
 
@@ -88,22 +91,22 @@ class Superstructure:
             RobotState.AIRBREAK_ENGAGED_DOWN
         ]:
             self._handle_elevator_states()
-        
+
         elif self.robot_state == RobotState.CLIMB_MANUAL:
             self._handle_climb_manual()
-        
+
         elif self.robot_state in [
             RobotState.INTAKE_DEPLOYED,
             RobotState.INTAKE_RETRACTED
         ]:
             self._handle_intake_position()
-        
+
         elif self.robot_state == RobotState.PLAYING_SONG:
             self._handle_playing_song()
 
         elif self.robot_state == RobotState.PLAYING_CHAMPIONSHIP_SONG:
             self._handle_playing_championship_song()
-            
+
 
         # Ensure we stop music if we leave the song state
         if self.robot_state != RobotState.PLAYING_SONG:
@@ -113,34 +116,32 @@ class Superstructure:
 
     def _update_readiness(self):
 
+        # Shooter readiness
         if self.hasShooter:
-            self.robot_readiness.shooterReady = (
-                self.shooter.atSpeed(tolerance_rpm=150)
-            )
+            self.robot_readiness.shooterReady = self.shooter.atSpeed(tolerance_rpm=100)
         else:
             self.robot_readiness.shooterReady = False
 
+        # Intake readiness
         if self.hasIntake:
-            self.robot_readiness.intakeDeployed = (
-                self.intake.isDeployed()
-            )
+            self.robot_readiness.intakeDeployed = self.intake.isDeployed()
         else:
             self.robot_readiness.intakeDeployed = False
 
+        # Climber readiness
         if self.hasClimber:
-            self.robot_readiness.elevatorAtTarget = (
-                self.climber.atTarget()
-            )
+            self.robot_readiness.elevatorAtTarget = self.climber.atTarget()
         else:
             self.robot_readiness.elevatorAtTarget = False
 
+        # Feeding rule
         self.robot_readiness.canFeed = (
-            self.robot_state in [
-                RobotState.SHOOTING,
-                RobotState.SHOOTING_AUTONOMOUS
-            ]
-            and self.robot_readiness.shooterReady
-            and self.hasIndexer
+                self.robot_state in [
+            RobotState.SHOOTING,
+            RobotState.SHOOTING_AUTONOMOUS
+        ]
+                and self.robot_readiness.shooterReady
+                and self.hasIndexer
         )
 
     # Public State API
@@ -155,21 +156,28 @@ class Superstructure:
 
     def setState(self, newState: RobotState):
 
-        # No-op if same state
         if newState == self.robot_state:
             return
 
         oldState = self.robot_state
         self.robot_state = newState
 
-        # Log state transition
+        # Reset shooter-ready debounce when entering/exiting PREP
+        if newState in [
+            RobotState.PREP_SHOT,
+            RobotState.PREP_SHOT_AUTONOMOUS
+        ]:
+            self._shooter_ready_since = None
+        else:
+            self._shooter_ready_since = None
+
         print(f"[Superstructure] {oldState.name} -> {newState.name}")
 
         SmartDashboard.putString(
             "Superstructure/State",
             newState.name
         )
-        
+
     # State Handlers
 
     # Handles idle state by ensuring all subsystems are stopped.
@@ -179,7 +187,7 @@ class Superstructure:
         self._stop_indexer()
         self.orchestra.stop()
 
-    # Start intaking on entry, but keep handling to manage shooter and indexer states
+    # Start intaking on entry
     def _handle_intaking(self):
 
         self._stop_shooter()
@@ -190,7 +198,7 @@ class Superstructure:
         if self.hasIndexer:
             self.indexer.feed()
 
-    # Start prep on entry, but keep handling in case we need to adjust for vision
+    # Start prep shot on entry
     def _handle_prep_shot(self):
 
         if not self.hasShooter:
@@ -203,14 +211,21 @@ class Superstructure:
         else:
             self.shooter.useDashboardPercent()
 
-        # Hold note while spinning
         if self.hasIndexer:
             self.indexer.stop()
-        
-        if self.robot_readiness.shooterReady:
-            self.setState(RobotState.SHOOTING)
 
-    # Start shooting on entry, but keep handling to manage feeding and adjust shooter speed if needed
+        # Debounced transition to SHOOTING
+        now = Timer.getFPGATimestamp()
+
+        if self.robot_readiness.shooterReady:
+            if self._shooter_ready_since is None:
+                self._shooter_ready_since = now
+            elif (now - self._shooter_ready_since) >= 0.12:
+                self.setState(RobotState.SHOOTING)
+        else:
+            self._shooter_ready_since = None
+
+    # Start shooting on entry
     def _handle_shooting(self):
 
         if not self.hasShooter:
@@ -223,16 +238,14 @@ class Superstructure:
         else:
             self.shooter.useDashboardPercent()
 
-        # Feed only if ready
-        if (
-            self.hasIndexer
-            and self.robot_readiness.shooterReady
-        ):
+        # Feed ONLY when ready
+        if self.robot_readiness.canFeed:
             self.indexer.feed()
-        elif self.hasIndexer:
-            self.indexer.stop()
+        else:
+            if self.hasIndexer:
+                self.indexer.stop()
 
-    # Start elevator movement on entry, but keep handling to manage subsystems and airbrake
+    # Start elevator movement on entry
     def _handle_elevator_states(self):
 
         self._stop_shooter()
@@ -279,8 +292,8 @@ class Superstructure:
 
         # DO NOT auto engage brake here.
         # ManualClimb command controls brake + movement.
-    
-    # Starts intake deployment/retraction on entry, but keeps handling to manage shooter/indexer states and ensure we return to IDLE after action is done
+
+    # Starts intake deployment/retraction on entry
     def _handle_intake_position(self):
 
         if not self.hasIntake:
@@ -298,7 +311,7 @@ class Superstructure:
     # Start song on entry
     def _handle_playing_song(self):
 
-        self.orchestraSubsystem.play_selected_song()
+        self.orchestra.play_selected_song()
 
     # Start championship song on entry
     def _handle_playing_championship_song(self):
