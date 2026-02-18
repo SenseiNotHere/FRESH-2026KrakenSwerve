@@ -256,8 +256,18 @@ class IndexerConstants:
     kFeedRPS = 18.0
 
     kP = 0.0
+    kI = 0.0
     kD = 0.0
     kFF = 0.12
+
+class AgitatorConstants:
+
+    kLeadMotorCANID = 1
+    kFollowerMotorCANID = 2
+
+    kP = 0.0
+    kI = 0.0
+    kD = 0.0
 
 class ClimberConstants:
 
@@ -270,25 +280,26 @@ class ClimberConstants:
     kForwardChannel = 3
     kReverseChannel = 4
 
-    kMaxPosition = 0
-    kMinPosition = -1
-    kClimbHeight = 0.4
+    kMaxPosition = -0.002
+    kMinPosition = -1.5
+    kClimbHeight = -0.002
     kHeightTolerance = 0.01
     kPositionDeadband = 0.01
-    kVelocityDeadband = 1.0
+    kVelocityDeadband = 0.0
     kStallCurrent = 55.0
     kStallTime = 0.3
     kManualSpeed = 1.0  # rotations per second
 
-    kP = 0.2
+    kP = 10.0
     kI = 0.0
     kD = 0.0
+    kS = 2.4
     kFF = 0.0
 
     kStatorCurrentLimit = 60
     kSupplyCurrentLimit = 40
 
-    kManualRPS = 0.5
+    kManualRPS = 3.0
 
 class TrenchAssistConstants:
 

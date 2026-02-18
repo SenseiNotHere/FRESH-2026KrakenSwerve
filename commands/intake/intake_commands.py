@@ -9,6 +9,8 @@ class RunIntake(Command):
         super().__init__()
         self.superstructure = superstructure
 
+        self.addRequirements(superstructure.intake)
+
     def initialize(self):
         self.superstructure.setState(RobotState.INTAKING)
 
@@ -24,10 +26,7 @@ class ReverseIntake(Command):
         super().__init__()
         self.superstructure = superstructure
 
-        if superstructure.hasIntake:
-            self.addRequirements(superstructure.intake)
-        if superstructure.hasIndexer:
-            self.addRequirements(superstructure.indexer)
+        self.addRequirements(superstructure.intake)
 
     def initialize(self):
         self.superstructure.setState(RobotState.IDLE)
@@ -35,9 +34,6 @@ class ReverseIntake(Command):
     def execute(self):
         if self.superstructure.hasIntake:
             self.superstructure.intake.reverse()
-
-        if self.superstructure.hasIndexer:
-            self.superstructure.indexer.reverse()
 
     def end(self, interrupted: bool):
         self.superstructure.setState(RobotState.IDLE)
@@ -50,6 +46,8 @@ class DeployAndRunIntake(Command):
     def __init__(self, superstructure: Superstructure):
         super().__init__()
         self.superstructure = superstructure
+
+        self.addRequirements(superstructure.intake)
 
     def initialize(self):
 
@@ -75,6 +73,8 @@ class DeployRetractIntake(Command):
         super().__init__()
         self.superstructure = superstructure
 
+        self.addRequirements(superstructure.intake)
+
     def initialize(self):
         if not self.superstructure.hasIntake:
             return
@@ -83,7 +83,7 @@ class DeployRetractIntake(Command):
         if not self.superstructure.intake.isDeployed():
             self.superstructure.intake.deploy()
         else:
-            self.superstructure.intake.retract()
+            self.superstructure.intake.stow()
 
     def end(self, interrupted: bool):
         self.superstructure.setState(RobotState.IDLE)

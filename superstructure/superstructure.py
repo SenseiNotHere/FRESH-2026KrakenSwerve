@@ -1,11 +1,14 @@
 from commands2 import FunctionalCommand
-from wpilib import SmartDashboard, Timer
+from commands2.button import CommandGenericHID
+from wpilib import SmartDashboard, Timer, XboxController
+from wpilib.interfaces import GenericHID
 
 from subsystems.shooter.shootersubsystem import Shooter
 from subsystems.shooter.shot_calculator import ShotCalculator
 from subsystems.intake.intakesubsystem import Intake
 from subsystems.climber.climbersubsystem import Climber
 from subsystems.shooter.indexersubsystem import Indexer
+from subsystems.shooter.agitadorsubsystem import Agitator
 from subsystems.vision.limelightcamera import LimelightCamera
 from subsystems.drive.drivesubsystem import DriveSubsystem
 from subsystems.orchestra.orchestrasubsystem import OrchestraSubsystem
@@ -22,24 +25,31 @@ class Superstructure:
         drivetrain: DriveSubsystem | None = None,
         shooter: Shooter | None = None,
         indexer: Indexer | None = None,
+        agitator: Agitator | None = None,
         shotCalculator: ShotCalculator | None = None,
         intake: Intake | None = None,
         climber: Climber | None = None,
         vision: LimelightCamera | None = None,
-        orchestra: OrchestraSubsystem | None = None
+        orchestra: OrchestraSubsystem | None = None,
+        driverController: CommandGenericHID | None = None,
+        operatorController: CommandGenericHID | None = None
     ):
         self.drivetrain = drivetrain
         self.shooter = shooter
         self.indexer = indexer
+        self.agitator = agitator
         self.shotCalculator = shotCalculator
         self.intake = intake
         self.climber = climber
         self.vision = vision
         self.orchestra = orchestra
+        self.driverController = driverController
+        self.operatorController = operatorController
 
         # Subsystems
         self.hasShooter = shooter is not None
         self.hasIndexer = indexer is not None
+        self.hasAgitator = agitator is not None
         self.hasShotCalc = shotCalculator is not None
         self.hasIntake = intake is not None
         self.hasClimber = climber is not None
@@ -52,9 +62,19 @@ class Superstructure:
         # Shooter readiness debounce
         self._shooter_ready_since = None
 
+        # Elevator readiness
+        self._prev_elevator_at_target = False
+
+        # Rumble controller
+        self._rumble_end_time = None
+
     # Update Loop
 
     def update(self):
+        """
+        Superstructure update loop.
+        Should be called periodically to update subsystem states.
+        """
 
         SmartDashboard.putString(
             "Superstructure/State",
@@ -112,6 +132,15 @@ class Superstructure:
         if self.robot_state != RobotState.PLAYING_SONG:
             self.orchestra.stop()
 
+        if getattr(self, "_rumble_end_time", None):
+            if Timer.getFPGATimestamp() >= self._rumble_end_time:
+                self._rumble_controller(
+                    self.driverController,
+                    XboxController.RumbleType.kBothRumble,
+                    0.0
+                )
+                self._rumble_end_time = None
+
     # Readiness
 
     def _update_readiness(self):
@@ -144,6 +173,19 @@ class Superstructure:
                 and self.hasIndexer
         )
 
+        # Rumble Controller - Readiness
+        current = self.robot_readiness.elevatorAtTarget
+
+        if current and not self._prev_elevator_at_target:
+            self._rumble_controller(
+                self.driverController,
+                XboxController.RumbleType.kRightRumble,
+                0.5
+            )
+            self._rumble_end_time = Timer.getFPGATimestamp() + 0.2
+
+        self._prev_elevator_at_target = current
+
     # Public State API
 
     def createStateCommand(self, state: RobotState):
@@ -170,6 +212,20 @@ class Superstructure:
             self._shooter_ready_since = None
         else:
             self._shooter_ready_since = None
+
+        # Rumble controller - States
+        if newState in [
+            RobotState.PREP_SHOT,
+            RobotState.SHOOTING,
+            RobotState.INTAKING,
+            RobotState.ELEVATOR_RISING
+        ]:
+            self._rumble_controller(
+                self.driverController,
+                XboxController.RumbleType.kBothRumble,
+                0.3
+            )
+            self._rumble_end_time = Timer.getFPGATimestamp() + 0.15
 
         print(f"[Superstructure] {oldState.name} -> {newState.name}")
 
@@ -241,9 +297,13 @@ class Superstructure:
         # Feed ONLY when ready
         if self.robot_readiness.canFeed:
             self.indexer.feed()
+            if self.hasAgitator:
+                self.agitator.feed()
         else:
             if self.hasIndexer:
                 self.indexer.stop()
+            if self.hasAgitator:
+                self.agitator.stop()
 
     # Start elevator movement on entry
     def _handle_elevator_states(self):
@@ -330,3 +390,17 @@ class Superstructure:
     def _stow_intake(self):
         if self.hasIntake:
             self.intake.stow()
+
+    @staticmethod
+    def _rumble_controller(
+            controller,
+            rumble_type: XboxController.RumbleType,
+            rumble_value: float
+    ):
+        if controller is None:
+            return
+
+        controller.getHID().setRumble(
+            rumble_type,
+            rumble_value
+        )

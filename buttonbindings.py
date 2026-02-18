@@ -1,18 +1,17 @@
 from wpilib import XboxController, SmartDashboard
-from wpimath.geometry import Pose2d, Rotation2d, Translation2d
+from wpimath.geometry import Pose2d, Rotation2d
 from commands2 import InstantCommand
 
-from commands.climber.climber_commands import HoldAirbrake, ManualClimb, ToggleClimbAuto
+from commands.climber.climber_commands import HoldAirbrake, ToggleClimbAuto
 from commands.intake.intake_commands import DeployAndRunIntake, ReverseIntake
 from superstructure.robot_state import RobotState
 
 from constants.constants import *
 from constants.field_constants import AprilTags
 
-from commands.drive.reset_xy import ResetXY, ResetSwerveFront
-from commands.auto.drive_torwards_object import SwerveTowardsObject
-from commands.drive.point_torwards_location import PointTowardsLocation
-from commands.vision.limelight_comands import SetCameraPipeline
+from commands.drive.direct.reset_xy import ResetXY, ResetSwerveFront
+from commands.auto.direct.drive_torwards_object import SwerveTowardsObject
+from commands.drive.direct.point_torwards_location import PointTowardsLocation
 
 
 class ButtonBindings:
@@ -159,6 +158,18 @@ class ButtonBindings:
         yButton = self.operatorController.button(XboxController.Button.kY)
         yButton.whileTrue(self.superstructure.createStateCommand(
             RobotState.INTAKE_RETRACTED
+        ))
+
+        # Go to climb height
+        bButton = self.operatorController.button(XboxController.Button.kB)
+        bButton.whileTrue(self.superstructure.createStateCommand(
+            RobotState.ELEVATOR_RISING
+        ))
+
+        # Elevator go down
+        aButton = self.operatorController.button(XboxController.Button.kA)
+        aButton.whileTrue(self.superstructure.createStateCommand(
+            RobotState.ELEVATOR_LOWERING
         ))
 
     # Helpers

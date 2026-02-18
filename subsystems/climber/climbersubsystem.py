@@ -3,7 +3,7 @@ from typing import Optional
 from commands2 import Subsystem
 from wpilib import DoubleSolenoid, PneumaticsModuleType, SmartDashboard, Timer
 
-from phoenix6.controls import PositionVoltage, VelocityVoltage
+from phoenix6.controls import PositionVoltage, VelocityVoltage, DutyCycleOut
 from phoenix6.hardware import TalonFX, CANcoder
 from phoenix6.configs import (
     TalonFXConfiguration,
@@ -74,8 +74,8 @@ class Climber(Subsystem):
         )
 
         motorConfig.feedback.feedback_sensor_source = (
-            FeedbackSensorSourceValue.FUSED_CANCODER
-        )
+             FeedbackSensorSourceValue.REMOTE_CANCODER
+         )
         motorConfig.feedback.feedback_remote_sensor_id = canCoderCANID
 
         motorConfig.hardware_limit_switch.reverse_limit_enable = True
@@ -100,6 +100,7 @@ class Climber(Subsystem):
             .with_k_i(ClimberConstants.kI)
             .with_k_d(ClimberConstants.kD)
             .with_k_v(ClimberConstants.kFF)
+            .with_k_s(ClimberConstants.kS)
         )
         self.motor.configurator.apply(slotConfig)
 
@@ -113,12 +114,12 @@ class Climber(Subsystem):
             .with_stator_current_limit_enable(True)
         )
         self.motor.configurator.apply(currentLimits)
-
         self.positionRequest = PositionVoltage(0).with_slot(0)
         self.velocityRequest = VelocityVoltage(0).with_slot(0)
+        self.dutyCycleRequest = DutyCycleOut(0)
 
         # Sync motor to absolute
-        self.motor.set_position(self.getAbsolutePosition())
+        #self.motor.set_position(self.getAbsolutePosition())
 
         # State
         self.targetPosition: float = self.getRelativePosition()
@@ -163,6 +164,8 @@ class Climber(Subsystem):
         atSoftMax = position >= ClimberConstants.kMaxPosition - 0.01
 
         SmartDashboard.putNumber("Climber/Position", position)
+        SmartDashboard.putNumber("Climber/RotorPosition", self.motor.get_rotor_position().value)
+        SmartDashboard.putNumber("Climber/CANCoderPosition", self.canCoder.get_position().value)
         SmartDashboard.putNumber("Climber/TargetPosition", self.targetPosition)
         SmartDashboard.putNumber("Climber/PositionError", positionError)
 
@@ -288,8 +291,8 @@ class Climber(Subsystem):
         return self.motor.get_position().value
 
     def getAbsolutePosition(self) -> float:
-        return self.canCoder.get_absolute_position().value
-    
+        return self.canCoder.get_position().value
+
     # Motors
     def getMotors(self):
         yield self.motor

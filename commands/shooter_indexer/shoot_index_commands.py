@@ -9,6 +9,9 @@ class PrepShot(Command):
         super().__init__()
         self.superstructure = superstructure
 
+        self.addRequirements(superstructure.shooter)
+        self.addRequirements(superstructure.indexer)
+
     def initialize(self):
         self.superstructure.setState(RobotState.PREP_SHOT)
 

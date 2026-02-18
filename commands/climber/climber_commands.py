@@ -9,6 +9,8 @@ class ToggleClimbAuto(Command):
         super().__init__()
         self.superstructure = superstructure
 
+        self.addRequirements(superstructure.climber)
+
     def initialize(self):
 
         state = self.superstructure.robot_state

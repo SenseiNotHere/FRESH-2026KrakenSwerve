@@ -32,7 +32,7 @@ class Indexer(Subsystem):
         config.inverted(motorInverted)
 
         config.closedLoop.P(IndexerConstants.kP)
-        config.closedLoop.I(0.0)
+        config.closedLoop.I(IndexerConstants.kI)
         config.closedLoop.D(IndexerConstants.kD)
         config.closedLoop.velocityFF(IndexerConstants.kFF)
         config.closedLoop.outputRange(-1.0, 1.0)

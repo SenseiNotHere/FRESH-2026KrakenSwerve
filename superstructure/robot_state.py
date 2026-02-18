@@ -42,6 +42,8 @@ class RobotState(Enum):
 
 @dataclass
 class RobotReadiness:
+
+    # General readiness
     shooterReady: bool = False
     intakeDeployed: bool = False
     canFeed: bool = False

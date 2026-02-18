@@ -5,12 +5,10 @@ import commands2
 
 from commands2 import InstantCommand
 from commands2.button import CommandGenericHID
-from commands2 import CommandScheduler
 
 from wpilib import (
     XboxController,
-    SmartDashboard,
-    SendableChooser
+    SmartDashboard
 )
 
 from wpimath.geometry import (
@@ -29,7 +27,7 @@ from subsystems.pneumatics.pneumaticssubsystem import Pneumatics
 from subsystems.shooter.shot_calculator import ShotCalculator
 from subsystems.orchestra.orchestrasubsystem import OrchestraSubsystem
 from superstructure.superstructure import Superstructure
-from commands.drive.holonomic_drive import HolonomicDrive
+from commands.drive.direct.holonomic_drive import HolonomicDrive
 
 from commands.climber.climber_commands import ManualClimb
 
@@ -183,7 +181,9 @@ class RobotContainer:
             intake=self.intake,
             climber=self.climber,
             vision=self.limelight,
-            orchestra=self.orchestra
+            orchestra=self.orchestra,
+            driverController=self.driverController,
+            operatorController=self.operatorController
         )
 
         # Button Bindings
