@@ -39,18 +39,8 @@ class OrchestraSubsystem(Subsystem):
         self._song_chooser = SendableChooser()
 
         self._song_chooser.setDefaultOption(
-            "Bloodline - Ariana Grande",
-            "/home/lvuser/py/deploy/files/Bloodline.chrp"
-        )
-
-        self._song_chooser.addOption(
             "Yes And? - Ariana Grande",
             "/home/lvuser/py/deploy/files/Yesand.chrp"
-        )
-
-        self._song_chooser.addOption(
-            "Lavender Town",
-            "/home/lvuser/py/deploy/files/LavenderTown.chrp"
         )
 
         self._song_chooser.addOption(
@@ -86,16 +76,6 @@ class OrchestraSubsystem(Subsystem):
         self._song_chooser.addOption(
             "Despacito - Luis Fonsi",
             "/home/lvuser/py/deploy/files/Despacito.chrp"
-        )
-
-        self._song_chooser.addOption(
-            "Beauty and A Beat - Justin Bieber",
-            "/home/lvuser/py/deploy/files/BeautyAndABeat.chrp"
-        )
-
-        self._song_chooser.addOption(
-            "Downtown - Anitta",
-            "/home/lvuser/py/deploy/files/Downtown.chrp"
         )
 
         SmartDashboard.putData("Song Selection", self._song_chooser)

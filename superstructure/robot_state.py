@@ -27,10 +27,11 @@ class RobotState(Enum):
     # Elevator States (Teleop)
     ELEVATOR_RISING = 12
     ELEVATOR_LOWERING = 13
+    ELEVATOR_MINIMUM = 14
 
     # Drivetrain States (Teleop)
-    APPROACHING_OUTPOST = 14
-    APPROACHING_TOWER = 15
+    APPROACHING_OUTPOST = 15
+    APPROACHING_TOWER = 16
 
     # Autonomous States
     CLIMBER_DOWN_AUTONOMOUS = 20
@@ -47,4 +48,6 @@ class RobotReadiness:
     shooterReady: bool = False
     intakeDeployed: bool = False
     canFeed: bool = False
-    elevatorAtTarget: bool = False
+    elevatorAtHighTarget: bool = False
+    elevatorAtLowTarget: bool = False
+    elevatorAtClimbTarget: bool = False

@@ -5,7 +5,6 @@ from rev import (
     SparkMax,
     SparkMaxConfig,
     SparkLowLevel,
-    SparkBase,
     ResetMode,
     PersistMode
 )
@@ -36,26 +35,19 @@ class Intake(Subsystem):
 
         self.motor = SparkMax(
             motorCANID,
-            SparkLowLevel.MotorType.kBrushless
+            SparkLowLevel.MotorType.kBrushed
         )
 
         config = SparkMaxConfig()
         config.setIdleMode(SparkMaxConfig.IdleMode.kCoast)
         config.inverted(motorInverted)
 
-        config.closedLoop.P(IntakeConstants.kP)
-        config.closedLoop.I(0.0)
-        config.closedLoop.D(IntakeConstants.kD)
-        config.closedLoop.velocityFF(IntakeConstants.kFF)
-        config.closedLoop.outputRange(-1.0, 1.0)
-
+        # No closed-loop / PID configuration; we will command raw percentages.
         self.motor.configure(
             config,
             ResetMode.kResetSafeParameters,
             PersistMode.kPersistParameters
         )
-
-        self.pid = self.motor.getClosedLoopController()
 
         # Pneumatics
 
@@ -69,16 +61,16 @@ class Intake(Subsystem):
         self._deployed = False
         self._setDeployed(False)  # Start safe
 
-        # State
+        # State (raw percent output -1.0..1.0)
 
-        self._targetRPM: Optional[float] = None
+        self._targetPercent: Optional[float] = None
 
         # Speed chooser
         self.speedChooser = SendableChooser()
-        self.speedChooser.setDefaultOption("100%", 1.0)
+        self.speedChooser.setDefaultOption("50%", 0.5)
         self.speedChooser.addOption("75%", 0.75)
-        self.speedChooser.addOption("50%", 0.5)
         self.speedChooser.addOption("25%", 0.25)
+        self.speedChooser.addOption("100%", 1.0)
         self.speedChooser.addOption("0%", 0.0)
 
         SmartDashboard.putData("Intake Speed", self.speedChooser)
@@ -87,36 +79,30 @@ class Intake(Subsystem):
 
     def periodic(self):
 
-        if self._targetRPM is None:
+        if self._targetPercent is None:
             self.motor.set(0.0)
         else:
-            self.pid.setReference(
-                self._targetRPM,
-                SparkBase.ControlType.kVelocity
-            )
+            # Raw open-loop percent output
+            self.motor.set(self._targetPercent)
 
         SmartDashboard.putBoolean("Intake/Deployed", self._deployed)
         SmartDashboard.putNumber(
-            "Intake/Target RPM",
-            self._targetRPM if self._targetRPM else 0.0
+            "Intake/Target Percent",
+            self._targetPercent if self._targetPercent is not None else 0.0
         )
 
     # High-Level API (Superstructure Calls These)
 
     def startIntaking(self):
-        self._setDeployed(True)
-
         scale = self.speedChooser.getSelected()
-        self._targetRPM = IntakeConstants.kIntakeRPS * 60.0 * scale
+        self._targetPercent = float(scale)
 
     def reverse(self):
-        self._setDeployed(True)
-
         scale = self.speedChooser.getSelected()
-        self._targetRPM = -IntakeConstants.kIntakeRPS * 60.0 * scale
+        self._targetPercent = -float(scale)
 
     def stop(self):
-        self._targetRPM = None
+        self._targetPercent = None
         self.motor.set(0.0)
 
     def deploy(self):

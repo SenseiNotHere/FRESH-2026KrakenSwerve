@@ -1,4 +1,4 @@
-from wpimath.geometry import Pose2d, Pose3d, Rotation3d
+from wpimath.geometry import Pose2d, Rotation2d, Pose3d, Rotation3d
 from wpimath.units import inchesToMeters
 from wpilib import DriverStation
 from wpimath.geometry import Translation2d
@@ -90,6 +90,15 @@ class Hub:
         Rotation3d(),
     )
 
+    BLUE_HUB = Translation2d(4.619, 4.035)
+    RED_HUB = Translation2d(11.921, 4.035)
+
+class Tower:
+    BLUE_TOWER_CLIMB_TOP = Pose2d(1.066, 4.800, Rotation2d.fromDegrees(270))
+    RED_TOWER_CLIMB_TOP = Pose2d(15.460, 5.353, Rotation2d.fromDegrees(270))
+
+    BLUE_TOWER_CLIMB_BOTTOM = Pose2d(1.066, 2.720, Rotation2d.fromDegrees(90))
+    RED_TOWER_CLIMB_BOTTOM = Pose2d(15.460, 3.273, Rotation2d.fromDegrees(90))
 class AprilTags:
     APRIL_TAG_POSITIONS = {
         1: Translation2d(3.6074798, 3.3902756),

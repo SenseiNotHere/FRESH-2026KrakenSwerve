@@ -30,10 +30,6 @@ class Agitator(Subsystem):
         leadConfig.setIdleMode(SparkMaxConfig.IdleMode.kCoast)
         leadConfig.inverted(leadMotorInverted)
 
-        leadConfig.closedLoop.P(AgitatorConstants.kP)
-        leadConfig.closedLoop.I(AgitatorConstants.kI)
-        leadConfig.closedLoop.D(AgitatorConstants.kD)
-
         self.leadMotor.configure(
             leadConfig,
             ResetMode.kResetSafeParameters,

@@ -2,16 +2,15 @@ from wpilib import XboxController, SmartDashboard
 from wpimath.geometry import Pose2d, Rotation2d
 from commands2 import InstantCommand
 
-from commands.climber.climber_commands import HoldAirbrake, ToggleClimbAuto
-from commands.intake.intake_commands import DeployAndRunIntake, ReverseIntake
+from commands.auto.follow_shoot_hub import FollowShootHub
+from commands.climber.climber_commands import ToggleClimbAuto
+from commands.intake.intake_commands import RunIntake, ReverseIntake, DeployRetractIntake
 from superstructure.robot_state import RobotState
 
-from constants.constants import *
 from constants.field_constants import AprilTags
 
-from commands.drive.direct.reset_xy import ResetXY, ResetSwerveFront
-from commands.auto.direct.drive_torwards_object import SwerveTowardsObject
-from commands.drive.direct.point_torwards_location import PointTowardsLocation
+from commands.drive.reset_xy import ResetXY, ResetSwerveFront
+from commands.auto.drive_torwards_object import SwerveTowardsObject
 
 
 class ButtonBindings:
@@ -36,9 +35,7 @@ class ButtonBindings:
     # Driver Controls
 
     def _configureDriverBindings(self):
-
         # Reset Controls
-
         self.driverController.pov(0).onTrue(
             ResetXY(
                 x=0.0,
@@ -56,8 +53,8 @@ class ButtonBindings:
             InstantCommand(self.robotDrive.setX, self.robotDrive)
         )
 
-        # Prep Shot (A Button)
-
+        # Shooter
+        # A = Shoot
         self.driverController.button(
             XboxController.Button.kA
         ).whileTrue(
@@ -66,32 +63,15 @@ class ButtonBindings:
             )
         )
 
-        # Intake (B Button)
-
-        self.driverController.button(
-            XboxController.Button.kB
+        # Right Trigger = Follow hub and shoot
+        self.driverController.axisGreaterThan(
+            XboxController.Axis.kRightTrigger,
+            threshold=0.05
         ).whileTrue(
-            self.superstructure.createStateCommand(
-                RobotState.INTAKING
-            )
+            FollowShootHub(self.robotContainer.superstructure, self.robotDrive)
         )
 
-        # Climb Auto (Left Bumper)
-        self.driverController.button(
-            XboxController.Button.kLeftBumper
-        ).onTrue(
-            ToggleClimbAuto(self.robotContainer.superstructure)
-        )
-
-        # Engage Airbrakes (Right Bumper)
-        self.driverController.button(
-            XboxController.Button.kRightBumper
-        ).whileTrue(
-                HoldAirbrake(self.robotContainer.climber)
-        )
-
-        # Swerve Toward Gamepiece
-
+        # Left Trigger = Auto Swerve Toward Gamepiece
         driveToGamepiece = SwerveTowardsObject(
             drivetrain=self.robotDrive,
             speed=lambda: -self.driverController.getRawAxis(
@@ -110,14 +90,62 @@ class ButtonBindings:
             threshold=0.05
         ).whileTrue(driveToGamepiece)
 
-        # create a command for keeping the robot nose pointed 45 degrees (for traversing the hump on a swerve drive)
-        keepNoseAt45Degrees = PointTowardsLocation(
-            drivetrain=self.robotDrive,
-            location=Translation2d(x=999999, y=999999),  # if we want 50 degrees or 40 degrees, change the ratio of x/y
-            locationIfRed=Translation2d(x=-999999, y=-999999),
+    # Operator Controls
+
+    def _configureOperatorBindings(self):
+        # Drawer / Elevator Controls
+        # Elevator Down
+        self.operatorController.button(
+            XboxController.Button.kB
+        ).whileTrue(
+            self.superstructure.createStateCommand(
+                RobotState.ELEVATOR_LOWERING
+            )
         )
-        self.driverController.button(XboxController.Button.kRightBumper).whileTrue(keepNoseAt45Degrees)
-        # ^^ set up a condition for when to do this: do it when the joystick right trigger is pressed by more than 50%
+
+        # Elevator Up
+        self.operatorController.button(
+            XboxController.Button.kY
+        ).whileTrue(
+            self.superstructure.createStateCommand(
+                RobotState.ELEVATOR_RISING
+            )
+        )
+
+        # Elevator Minimum
+        self.operatorController.button(
+            XboxController.Button.kX
+        ).onTrue(
+            self.superstructure.createStateCommand(
+                RobotState.ELEVATOR_MINIMUM
+            )
+        )
+
+        # Intake Controls
+        # A = Deploy/Stow Intake
+        self.operatorController.button(
+            XboxController.Button.kA
+        ).onTrue(
+            DeployRetractIntake(self.robotContainer.superstructure)
+        )
+
+        # Right Trigger = Intake
+        self.operatorController.axisGreaterThan(
+            XboxController.Axis.kRightTrigger,
+            threshold=0.05
+        ).whileTrue(
+            RunIntake(self.robotContainer.superstructure)
+        )
+
+        # Left Trigger = Reverse intake
+        self.operatorController.axisGreaterThan(
+            XboxController.Axis.kLeftTrigger,
+            threshold=0.05
+        ).whileTrue(
+            ReverseIntake(self.robotContainer.superstructure)
+        )
+
+    # Helpers
 
     def _log_and_get_april_tag_position(self, tag_id_callable, tag_id_name):
         tag_id = tag_id_callable()
@@ -130,63 +158,4 @@ class ButtonBindings:
             f"command/c{self.__class__.__name__}/{tag_id_name}_position",
             f"Position: {position}"
         )
-        return position    # Operator Controls
-
-    def _configureOperatorBindings(self):
-
-        # Deploy and Run Intake (Right Bumper)
-        self.operatorController.button(
-            XboxController.Button.kRightBumper
-        ).whileTrue(
-            DeployAndRunIntake(self.robotContainer.superstructure)
-        )
-
-        # Run intake in reverse (Left Bumper)
-        self.operatorController.button(
-            XboxController.Button.kLeftBumper
-        ).whileTrue(
-            ReverseIntake(self.robotContainer.superstructure)
-        )
-
-        # Deploy intake (X Button)
-        xButton = self.operatorController.button(XboxController.Button.kX)
-        xButton.whileTrue(self.superstructure.createStateCommand(
-            RobotState.INTAKE_DEPLOYED
-        ))
-
-        # Retract intake (Y Button)
-        yButton = self.operatorController.button(XboxController.Button.kY)
-        yButton.whileTrue(self.superstructure.createStateCommand(
-            RobotState.INTAKE_RETRACTED
-        ))
-
-        # Go to climb height
-        bButton = self.operatorController.button(XboxController.Button.kB)
-        bButton.whileTrue(self.superstructure.createStateCommand(
-            RobotState.ELEVATOR_RISING
-        ))
-
-        # Elevator go down
-        aButton = self.operatorController.button(XboxController.Button.kA)
-        aButton.whileTrue(self.superstructure.createStateCommand(
-            RobotState.ELEVATOR_LOWERING
-        ))
-
-    # Helpers
-
-    def _get_apriltag_position(self, tag_id_callable, tag_name):
-        tag_id = tag_id_callable()
-
-        SmartDashboard.putString(
-            f"command/c{self.__class__.__name__}/{tag_name}",
-            f"Tag ID: {tag_id}"
-        )
-
-        position = AprilTags.APRIL_TAG_POSITIONS.get(tag_id)
-
-        SmartDashboard.putString(
-            f"command/c{self.__class__.__name__}/{tag_name}_position",
-            f"Position: {position}"
-        )
-
         return position

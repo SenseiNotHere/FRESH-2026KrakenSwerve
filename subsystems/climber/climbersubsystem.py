@@ -116,10 +116,6 @@ class Climber(Subsystem):
         self.motor.configurator.apply(currentLimits)
         self.positionRequest = PositionVoltage(0).with_slot(0)
         self.velocityRequest = VelocityVoltage(0).with_slot(0)
-        self.dutyCycleRequest = DutyCycleOut(0)
-
-        # Sync motor to absolute
-        #self.motor.set_position(self.getAbsolutePosition())
 
         # State
         self.targetPosition: float = self.getRelativePosition()
@@ -130,6 +126,11 @@ class Climber(Subsystem):
 
         self.airbrakeEngaged = False
         self.airbrake.set(DoubleSolenoid.Value.kReverse)
+
+        # Absolute offsetting + manual/limit-switch zeroing
+        self._absolute_position_offset: float = 0.0
+        self._prev_reverse_limit: bool = False
+        self._in_manual: bool = False
 
     # Periodic – Jam Detection
 
@@ -157,15 +158,27 @@ class Climber(Subsystem):
             self.jamTimer = 0.0
 
         # Diagnostics
-
         reverseLimit = self.motor.get_reverse_limit().value == 1
+        reverseLimitPressed = bool(reverseLimit)
+        reverseLimitRisingEdge = reverseLimitPressed and not self._prev_reverse_limit
+        self._prev_reverse_limit = reverseLimitPressed
+
+        # If we hit the reverse limit while in manual control, define that as kMinPosition
+        if reverseLimitRisingEdge and self._in_manual:
+            self.motor.set_position(ClimberConstants.kMinPosition)
+
+            raw_abs = self.canCoder.get_position().value
+            self._absolute_position_offset = ClimberConstants.kMinPosition - raw_abs
+
+            self.targetPosition = ClimberConstants.kMinPosition
 
         atSoftMin = position <= ClimberConstants.kMinPosition + 0.01
         atSoftMax = position >= ClimberConstants.kMaxPosition - 0.01
 
         SmartDashboard.putNumber("Climber/Position", position)
         SmartDashboard.putNumber("Climber/RotorPosition", self.motor.get_rotor_position().value)
-        SmartDashboard.putNumber("Climber/CANCoderPosition", self.canCoder.get_position().value)
+        SmartDashboard.putNumber("Climber/CANCoderPositionRaw", self.canCoder.get_position().value)
+        SmartDashboard.putNumber("Climber/CANCoderPosition", self.getAbsolutePosition())
         SmartDashboard.putNumber("Climber/TargetPosition", self.targetPosition)
         SmartDashboard.putNumber("Climber/PositionError", positionError)
 
@@ -177,9 +190,10 @@ class Climber(Subsystem):
         )
 
         SmartDashboard.putBoolean("Climber/CommandedActive", self.commandedActive)
+        SmartDashboard.putBoolean("Climber/InManual", self._in_manual)
         SmartDashboard.putBoolean("Climber/AtTarget", self.atTarget())
 
-        SmartDashboard.putBoolean("Climber/ReverseLimit", reverseLimit)
+        SmartDashboard.putBoolean("Climber/ReverseLimit", reverseLimitPressed)
         SmartDashboard.putBoolean("Climber/AtSoftMin", atSoftMin)
         SmartDashboard.putBoolean("Climber/AtSoftMax", atSoftMax)
 
@@ -198,7 +212,7 @@ class Climber(Subsystem):
 
         if self.airbrakeEngaged:
             reason = "Airbrake Engaged"
-        elif reverseLimit:
+        elif reverseLimitPressed:
             reason = "Reverse Limit Switch"
         elif atSoftMin:
             reason = "Soft Min Limit"
@@ -220,6 +234,8 @@ class Climber(Subsystem):
         if self.airbrakeEngaged:
             return  # Do not allow movement while brake engaged
 
+        self._in_manual = False
+
         pos = max(
             ClimberConstants.kMinPosition,
             min(pos, ClimberConstants.kMaxPosition)
@@ -232,9 +248,9 @@ class Climber(Subsystem):
             self.positionRequest.with_position(pos)
         )
 
-
     def stop(self):
         self.commandedActive = False
+        self._in_manual = False
         self.motor.set_control(
             self.positionRequest.with_position(
                 self.getRelativePosition()
@@ -246,12 +262,39 @@ class Climber(Subsystem):
             self.targetPosition - self.getRelativePosition()
         )
 
-        velocity = abs(self.motor.get_velocity().value)
-
         return (
             position_error < ClimberConstants.kPositionDeadband
-            and velocity < ClimberConstants.kVelocityDeadband
         )
+
+    def atHighTarget(self) -> bool:
+        """
+        Risen height
+        """
+        position_error = abs(
+            self.targetPosition - self.getRelativePosition()
+        )
+
+        return (position_error < ClimberConstants.kPositionDeadband) and (self.targetPosition == ClimberConstants.kRisenHeight)
+
+    def atLowTarget(self) -> bool:
+        """
+        Min height
+        """
+        position_error = abs(
+            self.targetPosition - self.getRelativePosition()
+        )
+
+        return (position_error < ClimberConstants.kPositionDeadband) and (self.targetPosition == ClimberConstants.kMinPosition)
+
+    def atClimbTarget(self):
+        """
+        Climbed height
+        """
+        position_error = abs(
+            self.targetPosition - self.getRelativePosition()
+        )
+
+        return (position_error < ClimberConstants.kPositionDeadband) and (self.targetPosition == ClimberConstants.kClimbedHeight)
 
     # Manual Adjust
 
@@ -262,6 +305,8 @@ class Climber(Subsystem):
         if abs(joystickValue) < deadband:
             self.stop()
             return
+
+        self._in_manual = True
 
         # Release brake automatically in manual
         if self.airbrakeEngaged:
@@ -291,7 +336,7 @@ class Climber(Subsystem):
         return self.motor.get_position().value
 
     def getAbsolutePosition(self) -> float:
-        return self.canCoder.get_position().value
+        return self.canCoder.get_position().value + self._absolute_position_offset
 
     # Motors
     def getMotors(self):

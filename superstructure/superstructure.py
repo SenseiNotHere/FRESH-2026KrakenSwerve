@@ -15,7 +15,8 @@ from subsystems.orchestra.orchestrasubsystem import OrchestraSubsystem
 
 from .robot_state import RobotState, RobotReadiness
 
-from constants.constants import ClimberConstants
+from constants.constants import *
+from constants.field_constants import *
 
 
 class Superstructure:
@@ -159,9 +160,9 @@ class Superstructure:
 
         # Climber readiness
         if self.hasClimber:
-            self.robot_readiness.elevatorAtTarget = self.climber.atTarget()
-        else:
-            self.robot_readiness.elevatorAtTarget = False
+            self.robot_readiness.elevatorAtHighTarget = self.climber.atHighTarget()
+            self.robot_readiness.elevatorAtLowTarget = self.climber.atLowTarget()
+            self.robot_readiness.elevatorAtClimbTarget = self.climber.atClimbTarget()
 
         # Feeding rule
         self.robot_readiness.canFeed = (
@@ -174,7 +175,7 @@ class Superstructure:
         )
 
         # Rumble Controller - Readiness
-        current = self.robot_readiness.elevatorAtTarget
+        current = self.robot_readiness.elevatorAtHighTarget or self.robot_readiness.elevatorAtClimbTarget
 
         if current and not self._prev_elevator_at_target:
             self._rumble_controller(
@@ -241,8 +242,10 @@ class Superstructure:
 
         self._stop_shooter()
         self._stop_indexer()
-        self.orchestra.stop()
-
+        self._stop_intake()
+        self._stop_agitator()
+        self._stop_orchestra()
+        
     # Start intaking on entry
     def _handle_intaking(self):
 
@@ -250,9 +253,6 @@ class Superstructure:
 
         if self.hasIntake:
             self.intake.startIntaking()
-
-        if self.hasIndexer:
-            self.indexer.feed()
 
     # Start prep shot on entry
     def _handle_prep_shot(self):
@@ -307,38 +307,35 @@ class Superstructure:
 
     # Start elevator movement on entry
     def _handle_elevator_states(self):
-
         self._stop_shooter()
         self._stop_indexer()
-        self._stow_intake()
+        self._stop_intake()
 
         if not self.hasClimber:
             return
 
         state = self.robot_state
 
-        # Elevator Rising
+        # Max / Rise Height
         if state == RobotState.ELEVATOR_RISING:
             self.climber.releaseAirbrake()
-            self.climber.setPosition(ClimberConstants.kClimbHeight)
+            self.climber.setPosition(ClimberConstants.kRisenHeight)
 
-            if self.robot_readiness.elevatorAtTarget:
-                self.climber.engageAirbrake()
-                self.setState(RobotState.AIRBREAK_ENGAGED_UP)
-
-        # Elevator Lowering
+        # Mid / Lower Height
         elif state == RobotState.ELEVATOR_LOWERING:
+            self.climber.releaseAirbrake()
+            self.climber.setPosition(ClimberConstants.kClimbedHeight)
+
+        # Minimum Height
+        elif state == RobotState.ELEVATOR_MINIMUM:
             self.climber.releaseAirbrake()
             self.climber.setPosition(ClimberConstants.kMinPosition)
 
-            if self.robot_readiness.elevatorAtTarget:
-                self.setState(RobotState.IDLE)
-
-        # Brake engaged up
+        # Airbrake engaged (up)
         elif state == RobotState.AIRBREAK_ENGAGED_UP:
             self.climber.engageAirbrake()
 
-        # Brake engaged down (debug only)
+        # Airbrake engaged (down / debug)
         elif state == RobotState.AIRBREAK_ENGAGED_DOWN:
             self.climber.engageAirbrake()
 
@@ -348,7 +345,7 @@ class Superstructure:
         # Disable other mechanisms
         self._stop_shooter()
         self._stop_indexer()
-        self._stow_intake()
+        self._stop_intake()
 
         # DO NOT auto engage brake here.
         # ManualClimb command controls brake + movement.
@@ -390,6 +387,17 @@ class Superstructure:
     def _stow_intake(self):
         if self.hasIntake:
             self.intake.stow()
+            
+    def _stop_intake(self):
+        if self.hasIntake:
+            self.intake.stop()
+    
+    def _stop_orchestra(self):
+        self.orchestra.stop()
+        
+    def _stop_agitator(self):
+        if self.hasAgitator:
+            self.agitator.stop()
 
     @staticmethod
     def _rumble_controller(
