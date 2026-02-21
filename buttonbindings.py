@@ -2,7 +2,7 @@ from wpilib import XboxController, SmartDashboard
 from wpimath.geometry import Pose2d, Rotation2d
 from commands2 import InstantCommand
 
-from commands.auto.follow_shoot_hub import FollowShootHub
+from commands.auto.follow_shoot_hub import FollowShootBlueHub, FollowShootRedHub
 from commands.climber.climber_commands import ToggleClimbAuto
 from commands.intake.intake_commands import RunIntake, ReverseIntake, DeployRetractIntake
 from superstructure.robot_state import RobotState
@@ -68,7 +68,7 @@ class ButtonBindings:
             XboxController.Axis.kRightTrigger,
             threshold=0.05
         ).whileTrue(
-            FollowShootHub(self.robotContainer.superstructure, self.robotDrive)
+            FollowShootBlueHub(self.robotContainer.superstructure, self.robotDrive) # FIX THIS!!!
         )
 
         # Left Trigger = Auto Swerve Toward Gamepiece

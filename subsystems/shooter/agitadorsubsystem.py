@@ -15,31 +15,20 @@ from constants.constants import AgitatorConstants
 class Agitator(Subsystem):
     def __init__(
             self,
-            leadMotorCANID: int,
-            followMotorCANID: int,
-            leadMotorInverted: bool,
-            followMotorInverted: bool
+            motorCANID: int,
+            motorInverted: bool,
     ):
         super().__init__()
         # Motor init
-        self.leadMotor = SparkMax(leadMotorCANID, SparkLowLevel.MotorType.kBrushed)
-        self.followMotor = SparkMax(followMotorCANID, SparkLowLevel.MotorType.kBrushed)
+        self.motor = SparkMax(motorCANID, SparkLowLevel.MotorType.kBrushed)
 
-        leadConfig = SparkMaxConfig()
+        motorConfig = SparkMaxConfig()
 
-        leadConfig.setIdleMode(SparkMaxConfig.IdleMode.kCoast)
-        leadConfig.inverted(leadMotorInverted)
+        motorConfig.setIdleMode(SparkMaxConfig.IdleMode.kCoast)
+        motorConfig.inverted(motorInverted)
 
-        self.leadMotor.configure(
-            leadConfig,
-            ResetMode.kResetSafeParameters,
-            PersistMode.kPersistParameters
-        )
-
-        followConfig = SparkMaxConfig()
-        followConfig.follow(leadMotorCANID, followMotorInverted)
-        self.followMotor.configure(
-            followConfig,
+        self.motor.configure(
+            motorConfig,
             ResetMode.kResetSafeParameters,
             PersistMode.kPersistParameters
         )
@@ -53,19 +42,19 @@ class Agitator(Subsystem):
         SmartDashboard.putData(self.speedChooser)
 
     def periodic(self):
-        SmartDashboard.putNumber("Agitator Speed", self.leadMotor.get())
+        SmartDashboard.putNumber("Agitator Speed", self.motor.get())
         SmartDashboard.putBoolean("Agitator Running", self.isRunning())
 
     def feed(self) -> None:
-        self.leadMotor.set(self.speedChooser.getSelected())
+        self.motor.set(self.speedChooser.getSelected())
 
     def reverse(self) -> None:
-        self.leadMotor.set(-self.speedChooser.getSelected())
+        self.motor.set(-self.speedChooser.getSelected())
 
     def stop(self) -> None:
-        self.leadMotor.set(0)
+        self.motor.set(0)
 
     # Optional helper
 
     def isRunning(self) -> bool:
-        return abs(self.leadMotor.get()) > 0.01
+        return abs(self.motor.get()) > 0.01

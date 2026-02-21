@@ -6,9 +6,11 @@ import commands2
 from commands2 import InstantCommand
 from commands2.button import CommandGenericHID
 
+from pathplannerlib.auto import NamedCommands
+
 from wpilib import (
     XboxController,
-    SmartDashboard
+    SmartDashboard, SendableChooser
 )
 
 from wpimath.geometry import (
@@ -27,6 +29,7 @@ from subsystems.pneumatics.pneumaticssubsystem import Pneumatics
 from subsystems.shooter.shot_calculator import ShotCalculator
 from subsystems.orchestra.orchestrasubsystem import OrchestraSubsystem
 from superstructure.superstructure import Superstructure
+from superstructure.robot_state import RobotState
 from commands.drive.holonomic_drive import HolonomicDrive
 
 from commands.climber.climber_commands import ManualClimb
@@ -68,6 +71,10 @@ class RobotContainer:
 
         self.autoChooser = AutoBuilder.buildAutoChooser()
         SmartDashboard.putData("Auto Chooser", self.autoChooser)
+
+        # Test Chooser
+        self.testChooser = SendableChooser()
+        SmartDashboard.putData("Test Chooser", self.testChooser)
 
         # Controllers
 
@@ -208,6 +215,14 @@ class RobotContainer:
 
         self.buttonBindings = ButtonBindings(self)
         self.buttonBindings.configureButtonBindings()
+
+        # PathPlanner Lib command register
+        NamedCommands.registerCommand('Deploy Intake', self.superstructure.createStateCommand(RobotState.INTAKE_DEPLOYED))
+        NamedCommands.registerCommand('Start Intaking', self.superstructure.createStateCommand(RobotState.INTAKING))
+        NamedCommands.registerCommand('PREP_SHOT State', self.superstructure.createStateCommand(RobotState.PREP_SHOT))
+        NamedCommands.registerCommand('IDLE State', self.superstructure.createStateCommand(RobotState.IDLE))
+        NamedCommands.registerCommand('Elevator to Max', self.superstructure.createStateCommand(RobotState.ELEVATOR_RISING))
+        NamedCommands.registerCommand('Elevator to Climbed', self.superstructure.createStateCommand(RobotState.ELEVATOR_LOWERING))
 
     # Autonomous
 

@@ -6,16 +6,19 @@ from subsystems.drive.drivesubsystem import DriveSubsystem
 
 from constants.field_constants import Hub
 
-class FollowShootHub(ParallelCommandGroup):
+class FollowShootBlueHub(ParallelCommandGroup):
 
     def __init__(
         self,
         superstructure: Superstructure,
-        drivetrain: DriveSubsystem
+        drivetrain: DriveSubsystem,
+        hubCoords: Hub | None = None
     ):
+
+        hubCoords = hubCoords or Hub.BLUE_HUB
         point_cmd = PointTowardsLocation(
             drivetrain=drivetrain,
-            location=Hub.BLUE_HUB,
+            location=hubCoords,
             locationIfRed=Hub.RED_HUB
         )
         state_cmd = superstructure.createStateCommand(RobotState.PREP_SHOT)
@@ -27,3 +30,15 @@ class FollowShootHub(ParallelCommandGroup):
     def end(self, interrupted):
         self.superstructure.setState(RobotState.IDLE)
         self.drivetrain.stop()
+
+class FollowShootRedHub(FollowShootBlueHub):
+    def __init__(
+        self,
+        superstructure: Superstructure,
+        drivetrain: DriveSubsystem
+    ):
+        super().__init__(
+            superstructure=superstructure,
+            drivetrain=drivetrain,
+            hubCoords=Hub.RED_HUB
+        )
