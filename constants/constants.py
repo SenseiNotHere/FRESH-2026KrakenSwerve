@@ -262,8 +262,8 @@ class IndexerConstants:
 
 class AgitatorConstants:
 
-    kLeadMotorCANID = 1
-    kFollowerMotorCANID = 2
+    kMotorCANID = 3
+    kMotorInverted = False
 
 class ClimberConstants:
 

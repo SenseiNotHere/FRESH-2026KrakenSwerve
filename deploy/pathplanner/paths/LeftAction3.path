@@ -3,25 +3,25 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 2.819,
-        "y": 5.227
+        "x": 0.5,
+        "y": 5.2
       },
       "prevControl": null,
       "nextControl": {
-        "x": 1.8294483568075124,
-        "y": 5.8660328638497665
+        "x": 1.584600938967137,
+        "y": 5.7169953051643185
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 1.148,
-        "y": 4.716
+        "x": 2.766,
+        "y": 4.865
       },
       "prevControl": {
-        "x": 0.94586854460094,
-        "y": 5.206009389671362
+        "x": 2.105976525821596,
+        "y": 5.684706572769952
       },
       "nextControl": null,
       "isLocked": false,
@@ -33,7 +33,7 @@
   "pointTowardsZones": [],
   "eventMarkers": [
     {
-      "name": "Elevator to Max",
+      "name": "PrepShot",
       "waypointRelativePos": 1.0,
       "endWaypointRelativePos": null,
       "command": null
@@ -49,13 +49,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 90.0
+    "rotation": -25.0
   },
   "reversed": false,
-  "folder": "Blue Right",
+  "folder": "Left Auto",
   "idealStartingState": {
     "velocity": 0,
-    "rotation": -45.0
+    "rotation": -90.0
   },
   "useDefaultConstraints": true
 }

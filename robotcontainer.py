@@ -19,6 +19,7 @@ from wpimath.geometry import (
 )
 
 from subsystems.drive.drivesubsystem import DriveSubsystem, BadSimPhysics, AutoBuilder
+from subsystems.shooter.agitadorsubsystem import Agitator
 from subsystems.vision.limelightcamera import LimelightCamera
 from subsystems.vision.limelight_localizer import LimelightLocalizer
 from subsystems.shooter.shootersubsystem import Shooter
@@ -42,7 +43,7 @@ from constants.constants import (
     IndexerConstants,
     ClimberConstants,
     IntakeConstants,
-    PneumaticsConstants
+    PneumaticsConstants, AgitatorConstants
 )
 
 
@@ -177,6 +178,11 @@ class RobotContainer:
             self.climber,
             self.shooter,
         )
+
+        self.agitator = Agitator(
+            motorCANID=AgitatorConstants.kMotorCANID,
+            motorInverted=AgitatorConstants.kMotorInverted
+        )
  
         # Superstructure (MUST BE LAST)
 
@@ -184,6 +190,7 @@ class RobotContainer:
             drivetrain=self.robotDrive,
             shooter=self.shooter,
             indexer=self.indexer,
+            agitator=self.agitator,
             shotCalculator=self.shotCalculator,
             intake=self.intake,
             climber=self.climber,
@@ -216,13 +223,14 @@ class RobotContainer:
         self.buttonBindings = ButtonBindings(self)
         self.buttonBindings.configureButtonBindings()
 
-        # PathPlanner Lib command register
-        NamedCommands.registerCommand('Deploy Intake', self.superstructure.createStateCommand(RobotState.INTAKE_DEPLOYED))
-        NamedCommands.registerCommand('Start Intaking', self.superstructure.createStateCommand(RobotState.INTAKING))
-        NamedCommands.registerCommand('PREP_SHOT State', self.superstructure.createStateCommand(RobotState.PREP_SHOT))
-        NamedCommands.registerCommand('IDLE State', self.superstructure.createStateCommand(RobotState.IDLE))
-        NamedCommands.registerCommand('Elevator to Max', self.superstructure.createStateCommand(RobotState.ELEVATOR_RISING))
-        NamedCommands.registerCommand('Elevator to Climbed', self.superstructure.createStateCommand(RobotState.ELEVATOR_LOWERING))
+        # PathPlanner Named Commands
+        NamedCommands.registerCommand("DeployIntake", self.superstructure.createStateCommand(RobotState.INTAKE_DEPLOYED))
+        NamedCommands.registerCommand("RetractIntake", self.superstructure.createStateCommand(RobotState.INTAKE_RETRACTED))
+        NamedCommands.registerCommand("StartIntake", self.superstructure.createStateCommand(RobotState.INTAKING))
+        NamedCommands.registerCommand("PrepShot", self.superstructure.createStateCommand(RobotState.PREP_SHOT))
+        NamedCommands.registerCommand("SetIdle", self.superstructure.createStateCommand(RobotState.IDLE))
+        NamedCommands.registerCommand("ElevatorUp", self.superstructure.createStateCommand(RobotState.ELEVATOR_RISING))
+        NamedCommands.registerCommand("ElevatorDown", self.superstructure.createStateCommand(RobotState.ELEVATOR_LOWERING))
 
     # Autonomous
 

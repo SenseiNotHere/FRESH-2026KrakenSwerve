@@ -20,7 +20,7 @@ class Agitator(Subsystem):
     ):
         super().__init__()
         # Motor init
-        self.motor = SparkMax(motorCANID, SparkLowLevel.MotorType.kBrushed)
+        self.motor = SparkMax(motorCANID, SparkLowLevel.MotorType.kBrushless)
 
         motorConfig = SparkMaxConfig()
 
@@ -39,7 +39,7 @@ class Agitator(Subsystem):
         self.speedChooser.addOption("50%", 0.5)
         self.speedChooser.addOption("75%", 0.75)
         self.speedChooser.addOption("100%", 1.0)
-        SmartDashboard.putData(self.speedChooser)
+        SmartDashboard.putData('Agitator Chooser', self.speedChooser)
 
     def periodic(self):
         SmartDashboard.putNumber("Agitator Speed", self.motor.get())

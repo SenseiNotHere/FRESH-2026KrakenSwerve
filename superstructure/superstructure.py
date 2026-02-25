@@ -228,6 +228,30 @@ class Superstructure:
             )
             self._rumble_end_time = Timer.getFPGATimestamp() + 0.15
 
+        if newState == RobotState.ELEVATOR_RISING:
+            self._rumble_controller(
+                self.driverController,
+                XboxController.RumbleType.kBothRumble,
+                0.5
+            )
+            self._rumble_end_time = Timer.getFPGATimestamp() + 0.2
+
+        if newState == RobotState.ELEVATOR_LOWERING:
+            self._rumble_controller(
+                self.driverController,
+                XboxController.RumbleType.kBothRumble,
+                1.0
+            )
+            self._rumble_end_time = Timer.getFPGATimestamp() + 0.3
+
+        if newState == RobotState.ELEVATOR_MINIMUM:
+            self._rumble_controller(
+                self.driverController,
+                XboxController.RumbleType.kBothRumble,
+                0.2
+            )
+            self._rumble_end_time = Timer.getFPGATimestamp() + 0.2
+
         print(f"[Superstructure] {oldState.name} -> {newState.name}")
 
         SmartDashboard.putString(
