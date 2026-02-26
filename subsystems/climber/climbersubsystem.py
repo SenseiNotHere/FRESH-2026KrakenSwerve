@@ -78,7 +78,7 @@ class Climber(Subsystem):
          )
         motorConfig.feedback.feedback_remote_sensor_id = canCoderCANID
 
-        motorConfig.hardware_limit_switch.reverse_limit_enable = True
+        motorConfig.hardware_limit_switch.reverse_limit_enable = False
         motorConfig.hardware_limit_switch.reverse_limit_source = (
             ReverseLimitSourceValue.LIMIT_SWITCH_PIN
         )
@@ -177,7 +177,7 @@ class Climber(Subsystem):
         if reverseLimitRisingEdge:
             self.motor.set_position(ClimberConstants.kMinPosition)
 
-            raw_abs = self.canCoder.get_absolute_position().value
+            raw_abs = self.canCoder.get_position().value
 
             # NewOffset = DesiredPosition - RawAbsolute
             new_offset = ClimberConstants.kMinPosition - raw_abs
