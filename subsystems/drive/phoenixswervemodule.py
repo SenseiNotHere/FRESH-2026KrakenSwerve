@@ -18,8 +18,6 @@ from phoenix6.signals import (
     SensorDirectionValue,
 )
 from phoenix6.controls import VelocityVoltage, PositionVoltage, MotionMagicVelocityVoltage
-from phoenix6.orchestra import Orchestra
-
 from constants.constants import ModuleConstants
 
 
@@ -147,7 +145,6 @@ class PhoenixSwerveModule(Subsystem):
 
         # Init State
         self.resetEncoders()
-        self.orchestra = Orchestra([self.drivingMotor, self.turningMotor])
 
     # Periodic / Encoder Fusion
 
@@ -264,24 +261,6 @@ class PhoenixSwerveModule(Subsystem):
             self.drivingMotor.get_supply_current(),
             self.turningMotor.get_supply_current(),
         )
-
-    def loadMusic(self, path: str):
-        """
-        Loads a music file to the motors.
-        """
-        self.orchestra.load_music(path)
-
-    def playMusic(self):
-        """
-        Plays the loaded music through the motors.
-        """
-        self.orchestra.play()
-
-    def stopMusic(self):
-        """
-        Stops playing the currently playing music through the motors.
-        """
-        self.orchestra.stop()
 
     def getMotors(self):
         """

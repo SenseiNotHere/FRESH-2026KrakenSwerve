@@ -143,7 +143,7 @@ class Climber(Subsystem):
         self._prev_reverse_limit: bool = False
         self._in_manual: bool = False
 
-    # Periodic – Jam Detection
+    # Periodic
 
     def periodic(self):
         now = Timer.getFPGATimestamp()

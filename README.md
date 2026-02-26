@@ -57,7 +57,7 @@ Located in `subsystems/shooter/`
 - Closed-loop velocity control  
 - State-gated firing  
 - Coordinated indexing  
-- Vision-aware prep  
+- Vision-aware prep
 
 We don’t just press shoot and pray.  
 The robot confirms it’s ready.
@@ -65,6 +65,8 @@ The robot confirms it’s ready.
 ---
 
 ## 📦 Indexer
+
+Located in `subsystems/shooter/`
 
 - Motor: Brushed motor via SparkMax  
 - Controlled by superstructure  
@@ -76,11 +78,18 @@ No panic feeding. No chaos cycling.
 
 ## 😵‍💫 Agitator
 
-- M
+Located in `subsystems/shooter/`
+
+- Motor: NEO Brusheless motor via SparkMax
+- Runs when Indexer is running
+
+It shakey-shakey, we like it when it shakey-shakey.
 
 ---
 
 ## 🟢 Intake
+
+Located in `subsystems/intake/`
 
 - Motor: Brushed motor via SparkMax  
 - Pneumatic deployment system  
@@ -94,6 +103,8 @@ Ground intake energy handled.
 ---
 
 ## 🧗 Climber
+
+Located in `subsystems/climber/`
 
 - Pneumatic airbrake system  
 - Elevator coordination  
