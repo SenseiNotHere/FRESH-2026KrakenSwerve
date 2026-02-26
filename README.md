@@ -74,6 +74,12 @@ No panic feeding. No chaos cycling.
 
 ---
 
+## 😵‍💫 Agitator
+
+- M
+
+---
+
 ## 🟢 Intake
 
 - Motor: Brushed motor via SparkMax  
