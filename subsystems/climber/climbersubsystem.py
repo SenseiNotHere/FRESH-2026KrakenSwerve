@@ -9,7 +9,7 @@ from phoenix6.configs import (
     TalonFXConfiguration,
     CANcoderConfiguration,
     Slot0Configs,
-    CurrentLimitsConfigs
+    CurrentLimitsConfigs, Slot1Configs
 )
 from phoenix6.signals import (
     NeutralModeValue,
@@ -82,7 +82,7 @@ class Climber(Subsystem):
         motorConfig.hardware_limit_switch.reverse_limit_source = (
             ReverseLimitSourceValue.LIMIT_SWITCH_PIN
         )
-        motorConfig.hardware_limit_switch.reverse_limit_autoset_position_enable = True
+        motorConfig.hardware_limit_switch.reverse_limit_autoset_position_enable = False
         motorConfig.hardware_limit_switch.reverse_limit_autoset_position_value = (
             ClimberConstants.kMinPosition
         )
@@ -104,6 +104,17 @@ class Climber(Subsystem):
         )
         self.motor.configurator.apply(slotConfig)
 
+        velocitySlotConfig = Slot1Configs()
+        (
+            velocitySlotConfig
+            .with_k_p(ClimberConstants.kVelocityP)
+            .with_k_i(ClimberConstants.kI)
+            .with_k_d(ClimberConstants.kD)
+            .with_k_v(ClimberConstants.kFF)
+
+        )
+        self.motor.configurator.apply(velocitySlotConfig)
+
         # Current Limits
         currentLimits = CurrentLimitsConfigs()
         (
@@ -115,7 +126,7 @@ class Climber(Subsystem):
         )
         self.motor.configurator.apply(currentLimits)
         self.positionRequest = PositionVoltage(0).with_slot(0)
-        self.velocityRequest = VelocityVoltage(0).with_slot(0)
+        self.velocityRequest = VelocityVoltage(0).with_slot(1)
 
         # State
         self.targetPosition: float = self.getRelativePosition()
@@ -163,14 +174,29 @@ class Climber(Subsystem):
         reverseLimitRisingEdge = reverseLimitPressed and not self._prev_reverse_limit
         self._prev_reverse_limit = reverseLimitPressed
 
-        # If we hit the reverse limit while in manual control, define that as kMinPosition
-        if reverseLimitRisingEdge and self._in_manual:
+        if reverseLimitRisingEdge:
             self.motor.set_position(ClimberConstants.kMinPosition)
 
-            raw_abs = self.canCoder.get_position().value
-            self._absolute_position_offset = ClimberConstants.kMinPosition - raw_abs
+            raw_abs = self.canCoder.get_absolute_position().value
+
+            # NewOffset = DesiredPosition - RawAbsolute
+            new_offset = ClimberConstants.kMinPosition - raw_abs
+
+            canCoderConfig = CANcoderConfiguration()
+            canCoderConfig.magnet_sensor.magnet_offset = new_offset
+
+            # Safety preserve sensor direction
+            canCoderConfig.magnet_sensor.sensor_direction = (
+                SensorDirectionValue.CLOCKWISE_POSITIVE
+                if self.canCoder.configurator.refresh().magnet_sensor.sensor_direction
+                   == SensorDirectionValue.CLOCKWISE_POSITIVE
+                else SensorDirectionValue.COUNTER_CLOCKWISE_POSITIVE
+            )
+
+            self.canCoder.configurator.apply(canCoderConfig)
 
             self.targetPosition = ClimberConstants.kMinPosition
+            self.commandedActive = False
 
         atSoftMin = position <= ClimberConstants.kMinPosition + 0.01
         atSoftMax = position >= ClimberConstants.kMaxPosition - 0.01

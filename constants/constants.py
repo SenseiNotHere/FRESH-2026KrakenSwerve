@@ -293,6 +293,8 @@ class ClimberConstants:
     kS = 2.4
     kFF = 0.0
 
+    kVelocityP = 2.0
+
     kStatorCurrentLimit = 60
     kSupplyCurrentLimit = 40
 
