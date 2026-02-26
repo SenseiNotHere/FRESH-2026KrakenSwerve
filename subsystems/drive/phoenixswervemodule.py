@@ -140,7 +140,7 @@ class PhoenixSwerveModule(Subsystem):
         self.turningMotor.configurator.apply(turnLimits)
 
         # Control Requests
-        self.velocityRequest = MotionMagicVelocityVoltage(0, acceleration=250).with_slot(0)
+        self.velocityRequest = MotionMagicVelocityVoltage(0, acceleration=ModuleConstants.kMagicMotionAcceleration).with_slot(0)
         self.positionRequest = PositionVoltage(0).with_slot(0)
 
         # Init State

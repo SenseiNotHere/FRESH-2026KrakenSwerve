@@ -110,6 +110,7 @@ class ModuleConstants:
     kDrivingD = 0.0
     kDrivingS = 0.0
     kDrivingV = 0.124
+    kMagicMotionAcceleration = 250.0
     kDrivingFF = 1 / kDriveWheelFreeSpeedRps
 
     kDrivingMinOutput = -1.0
@@ -135,8 +136,8 @@ class ModuleConstants:
     kDrivingSyncMaxVelocity = 0.2
 
     # Neutral Modes
-    kDrivingMotorIdleMode = talon_fx.signals.NeutralModeValue(NeutralModeValue.BRAKE)
-    kTurningMotorIdleMode = talon_fx.signals.NeutralModeValue(NeutralModeValue.COAST)
+    kDrivingMotorIdleMode = NeutralModeValue(NeutralModeValue.BRAKE)
+    kTurningMotorIdleMode = NeutralModeValue(NeutralModeValue.COAST)
 
     # Current Limits
     kDrivingMotorCurrentLimit = 70
@@ -177,10 +178,6 @@ class AutoConstants:
         moduleConfig=moduleConfig,
         moduleOffsets=DrivingConstants.kModulePositions
     )
-
-    config.maxModuleSpeed = DrivingConstants.kMaxMetersPerSecond
-    config.driveBaseRadius = 0.45
-    config.maxCentripetalAcceleration = 3.0
 
     kUseSqrtControl = True
 
