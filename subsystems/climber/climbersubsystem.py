@@ -44,6 +44,7 @@ class Climber(Subsystem):
         self.motor.clear_sticky_faults()
 
         self.canCoder = CANcoder(canCoderCANID)
+        self.canCoderInverted = canCoderInverted
 
         self.airbrake = DoubleSolenoid(
             module=solenoidCANID,
@@ -188,8 +189,7 @@ class Climber(Subsystem):
             # Safety preserve sensor direction
             canCoderConfig.magnet_sensor.sensor_direction = (
                 SensorDirectionValue.CLOCKWISE_POSITIVE
-                if self.canCoder.configurator.refresh().magnet_sensor.sensor_direction
-                   == SensorDirectionValue.CLOCKWISE_POSITIVE
+                if self.canCoderInverted
                 else SensorDirectionValue.COUNTER_CLOCKWISE_POSITIVE
             )
 
