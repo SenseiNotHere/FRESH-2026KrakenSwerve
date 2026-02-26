@@ -31,3 +31,8 @@ Icon?
 .apdisk
 .AppleDB
 .AppleDesktop
+
+# Sim GUI
+simgui.json
+simgui-window.json
+simgui-ds.json
