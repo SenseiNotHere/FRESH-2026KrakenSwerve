@@ -109,7 +109,8 @@ class Superstructure:
             RobotState.ELEVATOR_RISING,
             RobotState.ELEVATOR_LOWERING,
             RobotState.AIRBREAK_ENGAGED_UP,
-            RobotState.AIRBREAK_ENGAGED_DOWN
+            RobotState.AIRBREAK_ENGAGED_DOWN,
+            RobotState.ELEVATOR_MINIMUM
         ]:
             self._handle_elevator_states()
 
@@ -350,10 +351,16 @@ class Superstructure:
             self.climber.releaseAirbrake()
             self.climber.setPosition(ClimberConstants.kClimbedHeight)
 
+            if self.climber.atClimbTarget():
+                self.climber.engageAirbrake()
+
         # Minimum Height
         elif state == RobotState.ELEVATOR_MINIMUM:
             self.climber.releaseAirbrake()
             self.climber.setPosition(ClimberConstants.kMinPosition)
+
+            if self.climber.atLowTarget():
+                self.climber.engageAirbrake()
 
         # Airbrake engaged (up)
         elif state == RobotState.AIRBREAK_ENGAGED_UP:

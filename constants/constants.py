@@ -209,10 +209,10 @@ class ShooterConstants:
     kShooterMotorID = 9
 
     kMinRPM = 600
-    kMaxRPM = 6000
+    kMaxRPM = 4500
 
-    kFF = 0.12
-    kP = 0.2
+    kFF = 0.121
+    kP = 0.4
     kI = 0.0001
     kD = 0.0
 
@@ -220,11 +220,10 @@ class ShooterConstants:
     kShooterStatorLimit = 140
 
     DISTANCE_TO_RPS = InterpolatingMap()
-    DISTANCE_TO_RPS.insert(1.5, 42.0)
-    DISTANCE_TO_RPS.insert(2.0, 48.0)
-    DISTANCE_TO_RPS.insert(2.5, 54.0)
-    DISTANCE_TO_RPS.insert(3.0, 60.0)
-    DISTANCE_TO_RPS.insert(3.5, 66.0)
+    DISTANCE_TO_RPS.insert(3.2, (3375/60))
+    DISTANCE_TO_RPS.insert(3.35, (3600/60))
+    DISTANCE_TO_RPS.insert(4.49, (3825/60))
+
 
 class PneumaticsConstants:
     kPCMID = 0
@@ -278,13 +277,13 @@ class ClimberConstants:
     kRisenHeight = -0.002
     kClimbedHeight = -1.5
     kHeightTolerance = 0.03
-    kPositionDeadband = 0.03
+    kPositionDeadband = 0.06
     kVelocityDeadband = 0.0
     kStallCurrent = 55.0
     kStallTime = 0.3
     kManualSpeed = 1.0  # rotations per second
 
-    kP = 10.0
+    kP = 20.0
     kI = 0.0
     kD = 0.0
     kS = 2.4

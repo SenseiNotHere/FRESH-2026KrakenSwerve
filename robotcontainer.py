@@ -191,7 +191,6 @@ class RobotContainer:
             shooter=self.shooter,
             indexer=self.indexer,
             agitator=self.agitator,
-            shotCalculator=self.shotCalculator,
             intake=self.intake,
             climber=self.climber,
             vision=self.limelight,

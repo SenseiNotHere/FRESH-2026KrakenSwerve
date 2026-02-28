@@ -1,5 +1,9 @@
+import math
+from typing import List
+
 from commands2 import Subsystem
-from wpimath.geometry import Pose2d, Pose3d
+from wpilib import SmartDashboard
+from wpimath.geometry import Pose2d, Pose3d, Translation2d, Rotation2d
 
 from constants.field_constants import Hub
 from constants.constants import ShooterConstants
@@ -52,6 +56,12 @@ class ShotCalculator(Subsystem):
         )
 
         self._effective_yaw = relative_pose.rotation().radians()
+        SmartDashboard.putNumber("ShotCalc/EffectiveYaw", 180 * self._effective_yaw / math.pi)
+        SmartDashboard.putNumber("ShotCalc/Distance", self._target_distance)
+
+        if self.drivetrain.field is not None:
+            vector_to_goal = self.target_location.translation().toTranslation2d() - drivetrain_pose.translation()
+            self.drivetrain.field.getObject("shot-calc-dir").setPoses(draw_arrow(drivetrain_pose.translation(), vector_to_goal))
 
     # Public API
 
@@ -66,3 +76,23 @@ class ShotCalculator(Subsystem):
 
     def getEffectiveYaw(self) -> float:
         return self._effective_yaw
+
+
+def draw_arrow(start: Translation2d, directionVector: Translation2d, nPoints=11, size=0.85, tip=0.1) -> List[Pose2d]:
+    result = []
+    length = directionVector.norm()
+    zero = Rotation2d(0)
+    if length > 0:
+        end = start
+        directionVector = directionVector / length
+        for i in range(nPoints):
+            end = start + directionVector * (size * i / nPoints)
+            result.append(Pose2d(end, zero))
+        ray1 = directionVector.rotateBy(Rotation2d.fromDegrees(90)) * tip
+        ray2 = directionVector * tip
+        ray3 = directionVector.rotateBy(Rotation2d.fromDegrees(-90)) * tip
+        result.append(Pose2d(end + ray1, zero))
+        result.append(Pose2d(end + ray2, zero))
+        result.append(Pose2d(end + ray3, zero))
+        result.append(Pose2d(end, zero))
+    return result

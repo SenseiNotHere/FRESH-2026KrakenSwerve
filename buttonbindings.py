@@ -63,32 +63,32 @@ class ButtonBindings:
             )
         )
 
-        # Right Trigger = Follow hub and shoot
-        self.driverController.axisGreaterThan(
-            XboxController.Axis.kRightTrigger,
-            threshold=0.05
-        ).whileTrue(
-            FollowShootBlueHub(self.robotContainer.superstructure, self.robotDrive) # FIX THIS!!!
-        )
+#        # Right Trigger = Follow hub and shoot
+#        self.driverController.axisGreaterThan(
+#            XboxController.Axis.kRightTrigger,
+#            threshold=0.05
+#        ).whileTrue(
+#            FollowShootBlueHub(self.robotContainer.superstructure, self.robotDrive) # FIX THIS!!!
+#        )
 
         # Left Trigger = Auto Swerve Toward Gamepiece
-        driveToGamepiece = SwerveTowardsObject(
-            drivetrain=self.robotDrive,
-            speed=lambda: -self.driverController.getRawAxis(
-                XboxController.Axis.kLeftTrigger
-            ),
-            camera=self.limelight,
-            cameraLocationOnRobot=Pose2d(
-                -0.4,
-                0,
-                Rotation2d.fromDegrees(180)
-            ),
-        )
+#        driveToGamepiece = SwerveTowardsObject(
+#            drivetrain=self.robotDrive,
+#            speed=lambda: -self.driverController.getRawAxis(
+#                XboxController.Axis.kLeftTrigger
+#            ),
+#            camera=self.limelight,
+#            cameraLocationOnRobot=Pose2d(
+#                -0.4,
+#                0,
+#                Rotation2d.fromDegrees(180)
+#            ),
+#        )
 
-        self.driverController.axisGreaterThan(
-            XboxController.Axis.kLeftTrigger,
-            threshold=0.05
-        ).whileTrue(driveToGamepiece)
+#        self.driverController.axisGreaterThan(
+#            XboxController.Axis.kLeftTrigger,
+#            threshold=0.05
+#        ).whileTrue(driveToGamepiece)
 
     # Operator Controls
 
@@ -115,7 +115,7 @@ class ButtonBindings:
         # Elevator Minimum
         self.operatorController.button(
             XboxController.Button.kX
-        ).onTrue(
+        ).whileTrue(
             self.superstructure.createStateCommand(
                 RobotState.ELEVATOR_MINIMUM
             )

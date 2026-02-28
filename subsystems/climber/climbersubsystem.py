@@ -9,7 +9,8 @@ from phoenix6.configs import (
     TalonFXConfiguration,
     CANcoderConfiguration,
     Slot0Configs,
-    CurrentLimitsConfigs, Slot1Configs
+    Slot1Configs,
+    CurrentLimitsConfigs
 )
 from phoenix6.signals import (
     NeutralModeValue,
@@ -17,7 +18,8 @@ from phoenix6.signals import (
     FeedbackSensorSourceValue,
     SensorDirectionValue,
     ReverseLimitSourceValue,
-    ReverseLimitTypeValue
+    ReverseLimitTypeValue,
+    ReverseLimitValue
 )
 
 from constants.constants import ClimberConstants
@@ -44,7 +46,6 @@ class Climber(Subsystem):
         self.motor.clear_sticky_faults()
 
         self.canCoder = CANcoder(canCoderCANID)
-        self.canCoderInverted = canCoderInverted
 
         self.airbrake = DoubleSolenoid(
             module=solenoidCANID,
@@ -79,7 +80,7 @@ class Climber(Subsystem):
          )
         motorConfig.feedback.feedback_remote_sensor_id = canCoderCANID
 
-        motorConfig.hardware_limit_switch.reverse_limit_enable = False
+        motorConfig.hardware_limit_switch.reverse_limit_enable = True
         motorConfig.hardware_limit_switch.reverse_limit_source = (
             ReverseLimitSourceValue.LIMIT_SWITCH_PIN
         )
@@ -105,16 +106,15 @@ class Climber(Subsystem):
         )
         self.motor.configurator.apply(slotConfig)
 
-        velocitySlotConfig = Slot1Configs()
+        slot1Config = Slot1Configs()
         (
-            velocitySlotConfig
+            slot1Config
             .with_k_p(ClimberConstants.kVelocityP)
             .with_k_i(ClimberConstants.kI)
             .with_k_d(ClimberConstants.kD)
             .with_k_v(ClimberConstants.kFF)
-
         )
-        self.motor.configurator.apply(velocitySlotConfig)
+        self.motor.configurator.apply(slot1Config)
 
         # Current Limits
         currentLimits = CurrentLimitsConfigs()
@@ -144,7 +144,7 @@ class Climber(Subsystem):
         self._prev_reverse_limit: bool = False
         self._in_manual: bool = False
 
-    # Periodic
+    # Periodic – Jam Detection
 
     def periodic(self):
         now = Timer.getFPGATimestamp()
@@ -170,33 +170,15 @@ class Climber(Subsystem):
             self.jamTimer = 0.0
 
         # Diagnostics
-        reverseLimit = self.motor.get_reverse_limit().value == 1
+        reverseLimit = self.motor.get_reverse_limit().value == ReverseLimitValue.CLOSED_TO_GROUND
         reverseLimitPressed = bool(reverseLimit)
         reverseLimitRisingEdge = reverseLimitPressed and not self._prev_reverse_limit
         self._prev_reverse_limit = reverseLimitPressed
 
         if reverseLimitRisingEdge:
-            self.motor.set_position(ClimberConstants.kMinPosition)
-
-            raw_abs = self.canCoder.get_position().value
-
-            # NewOffset = DesiredPosition - RawAbsolute
-            new_offset = ClimberConstants.kMinPosition - raw_abs
-
-            canCoderConfig = CANcoderConfiguration()
-            canCoderConfig.magnet_sensor.magnet_offset = new_offset
-
-            # Safety preserve sensor direction
-            canCoderConfig.magnet_sensor.sensor_direction = (
-                SensorDirectionValue.CLOCKWISE_POSITIVE
-                if self.canCoderInverted
-                else SensorDirectionValue.COUNTER_CLOCKWISE_POSITIVE
-            )
-
-            self.canCoder.configurator.apply(canCoderConfig)
+            self.canCoder.set_position(ClimberConstants.kMinPosition)
 
             self.targetPosition = ClimberConstants.kMinPosition
-            self.commandedActive = False
 
         atSoftMin = position <= ClimberConstants.kMinPosition + 0.01
         atSoftMax = position >= ClimberConstants.kMaxPosition - 0.01
