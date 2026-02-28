@@ -62,12 +62,6 @@ class RobotContainer:
         if commands2.TimedCommandRobot.isSimulation():
             self.robotDrive.simPhysics = BadSimPhysics(self.robotDrive, robot)
 
-        # Shot Calculator
-
-        self.shotCalculator = ShotCalculator(
-            drivetrain=self.robotDrive
-        )
-
         # Auto Chooser
 
         self.autoChooser = AutoBuilder.buildAutoChooser()
@@ -143,16 +137,24 @@ class RobotContainer:
 
         # Subsystems
 
+        # Shooter
         self.shooter = Shooter(
             motorCANID=ShooterConstants.kShooterMotorID,
             motorInverted=True,
         )
 
+        # Shot Calculator
+        self.shotCalculator = ShotCalculator(
+            drivetrain=self.robotDrive
+        )
+
+        # Indexer
         self.indexer = Indexer(
             motorCANID=IndexerConstants.kIndexerMotorID,
             motorInverted=True,
         )
 
+        # Intake
         self.intake = Intake(
             motorCANID=IntakeConstants.kIntakeMotorCANID,
             motorInverted=False,
@@ -162,6 +164,7 @@ class RobotContainer:
             reverseChannel=IntakeConstants.kSolenoidReverseChannel
         )
 
+        # Climber
         self.climber = Climber(
             motorCANID=ClimberConstants.kMotorID,
             motorInverted=ClimberConstants.kMotorInverted,
@@ -173,12 +176,14 @@ class RobotContainer:
             canCoderInverted=False
         )
 
+        # Orchestra
         self.orchestra = OrchestraSubsystem(
             self.robotDrive,
             self.climber,
             self.shooter,
         )
 
+        # Agitator
         self.agitator = Agitator(
             motorCANID=AgitatorConstants.kMotorCANID,
             motorInverted=AgitatorConstants.kMotorInverted
@@ -189,6 +194,7 @@ class RobotContainer:
         self.superstructure = Superstructure(
             drivetrain=self.robotDrive,
             shooter=self.shooter,
+            shotCalculator=self.shotCalculator,
             indexer=self.indexer,
             agitator=self.agitator,
             intake=self.intake,

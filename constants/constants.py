@@ -220,9 +220,9 @@ class ShooterConstants:
     kShooterStatorLimit = 140
 
     DISTANCE_TO_RPS = InterpolatingMap()
-    DISTANCE_TO_RPS.insert(3.2, (3375/60))
-    DISTANCE_TO_RPS.insert(3.35, (3600/60))
-    DISTANCE_TO_RPS.insert(4.49, (3825/60))
+    DISTANCE_TO_RPS.insert(3.2, 56.25)
+    DISTANCE_TO_RPS.insert(3.35, 60)
+    DISTANCE_TO_RPS.insert(4.49, 63.75)
 
 
 class PneumaticsConstants:

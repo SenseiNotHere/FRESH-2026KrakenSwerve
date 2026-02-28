@@ -144,6 +144,11 @@ class Climber(Subsystem):
         self._prev_reverse_limit: bool = False
         self._in_manual: bool = False
 
+        # Homing
+        self._is_homing: bool = False
+        self._homed: bool = False
+        self._homing_rps: float = ClimberConstants.kManualRPS * -0.5
+
     # Periodic – Jam Detection
 
     def periodic(self):
@@ -170,15 +175,33 @@ class Climber(Subsystem):
             self.jamTimer = 0.0
 
         # Diagnostics
-        reverseLimit = self.motor.get_reverse_limit().value == ReverseLimitValue.CLOSED_TO_GROUND
+        reverseLimit = (
+                self.motor.get_reverse_limit().value
+                == ReverseLimitValue.CLOSED_TO_GROUND
+        )
+
         reverseLimitPressed = bool(reverseLimit)
         reverseLimitRisingEdge = reverseLimitPressed and not self._prev_reverse_limit
         self._prev_reverse_limit = reverseLimitPressed
 
         if reverseLimitRisingEdge:
+            # Stop velocity control
+            self.motor.set_control(
+                self.velocityRequest.with_velocity(0)
+            )
+
+            # Zero CANcoder
             self.canCoder.set_position(ClimberConstants.kMinPosition)
 
             self.targetPosition = ClimberConstants.kMinPosition
+
+            self._is_homing = False
+            self._homed = True
+
+            # Hold position using position control
+            self.motor.set_control(
+                self.positionRequest.with_position(ClimberConstants.kMinPosition)
+            )
 
         atSoftMin = position <= ClimberConstants.kMinPosition + 0.01
         atSoftMax = position >= ClimberConstants.kMaxPosition - 0.01
@@ -192,10 +215,7 @@ class Climber(Subsystem):
 
         SmartDashboard.putNumber("Climber/Velocity", velocity)
         SmartDashboard.putNumber("Climber/StatorCurrent", current)
-        SmartDashboard.putNumber(
-            "Climber/SupplyCurrent",
-            self.motor.get_supply_current().value
-        )
+        SmartDashboard.putNumber("Climber/SupplyCurrent", self.motor.get_supply_current().value)
 
         SmartDashboard.putBoolean("Climber/CommandedActive", self.commandedActive)
         SmartDashboard.putBoolean("Climber/InManual", self._in_manual)
@@ -207,6 +227,8 @@ class Climber(Subsystem):
 
         SmartDashboard.putBoolean("Climber/AirbrakeEngaged", self.airbrakeEngaged)
         SmartDashboard.putNumber("Climber/JamTimer", self.jamTimer)
+
+        SmartDashboard.putBoolean("Climber/Homed", self._homed)
 
         # Jam Status
         if self.jamTimer > ClimberConstants.kStallTime:
@@ -263,6 +285,32 @@ class Climber(Subsystem):
             self.positionRequest.with_position(
                 self.getRelativePosition()
             )
+        )
+
+    def startHoming(self):
+
+        if self._homed:
+            return
+
+        # If already at limit, just zero immediately
+        reverseLimit = (
+                self.motor.get_reverse_limit().value
+                == ReverseLimitValue.CLOSED_TO_GROUND
+        )
+
+        if reverseLimit:
+            self.canCoder.set_position(ClimberConstants.kMinPosition)
+            self.targetPosition = ClimberConstants.kMinPosition
+            self._homed = True
+            return
+
+        self.releaseAirbrake()
+
+        self._is_homing = True
+        self.commandedActive = True
+
+        self.motor.set_control(
+            self.velocityRequest.with_velocity(self._homing_rps)
         )
 
     def atTarget(self) -> bool:

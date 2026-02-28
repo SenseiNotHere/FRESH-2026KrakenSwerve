@@ -1,8 +1,10 @@
-# FRESH 2026 - Kraken Swerve
+# FRESH 2026 - Bobby the Bilingual Box
 
 FRC Team 1811’s 2026 competition robot codebase.
 
-WE'RE STILL COMING UP WITH A ROBOT NAME :P
+Also known as Bobby the Box.
+For close friends, just Bobby.
+Pronouns: She/Her.
 
 Fully state-driven.  
 Fully superstructured.  
@@ -30,9 +32,145 @@ We’re building like we plan to keep winning with it.
 
 ---
 
+# ➕ Adding a New State
+
+States are the brain of this robot.
+
+Adding a new state is easy-peasy, but requires a little bit of thinking.
+
+Here’s the process.
+
+------------------------------------------------------------------------
+
+## 1️⃣ Define the State
+
+Go to:
+
+    superstructure/robot_state.py
+
+Add your new enum value inside `RobotState`.
+
+Example:
+
+``` python
+class RobotState(Enum):
+    ...
+    ALIGNING_TO_TARGET = 99
+```
+
+Keep it descriptive.  
+Make it very specific.
+
+Bad:
+
+``` python
+RUN_SHOOTER_FAST
+```
+
+Good:
+
+``` python
+PREP_SHOT
+ALIGNING_TO_TARGET
+APPROACHING_TOWER
+```
+
+------------------------------------------------------------------------
+
+## 2️⃣ Route It in `update()`
+
+Open:
+
+    superstructure/superstructure.py
+
+Inside the `update()` method, add your state to the routing logic:
+
+``` python
+elif self.robot_state == RobotState.ALIGNING_TO_TARGET:
+    self._handle_aligning_to_target()
+```
+
+If it logically belongs with other grouped states (like elevator
+states), add it to that list instead.
+
+------------------------------------------------------------------------
+
+## 3️⃣ Create the Handler
+
+Still inside `superstructure.py`, define the handler:
+
+``` python
+def _handle_aligning_to_target(self):
+    if not self.hasVision or not self.hasDrivetrain:
+        return
+
+    self.drivetrain.alignToTarget(self.vision)
+```
+
+Handlers should:
+
+-   Coordinate subsystems  
+-   Not contain low-level hardware code  
+-   Not bypass subsystem safety checks
+
+Subsystems execute.  
+Superstructure decides.
+
+------------------------------------------------------------------------
+
+## 4️⃣ (Optional) Add Readiness Logic
+
+If your state affects robot readiness (like shooter ready, elevator at
+target, etc.), update `_update_readiness()` accordingly.
+This is a good place to add safety checks.
+Also, make sure to add your robot readiness to the `RobotReadiness` Data Class.
+You can find it in `superstructure/robot_state.py`.
+
+This keeps rumble logic, feed gating, and state transitions consistent.
+
+------------------------------------------------------------------------
+
+## 5️⃣ Transition Properly
+
+To enter your new state:
+
+``` python
+self.superstructure.setState(RobotState.ALIGNING_TO_TARGET)
+```
+
+Or create a reusable command:
+
+``` python
+self.superstructure.createStateCommand(RobotState.ALIGNING_TO_TARGET)
+```
+
+Do NOT:
+
+-   Call subsystem motors directly from button bindings  
+-   Mix superstructure logic inside commands
+
+Intent flows through state.
+
+------------------------------------------------------------------------
+
+## 🧠 Design Guidelines
+
+When adding a state, ask:
+
+-   Is this a robot intention?  
+-   Can teleop and auto reuse it?
+
+If yes -> it belongs as a state.
+
+---
+
+Architecture first.  
+Results follow.
+
+
 # ⚙ Hardware Overview
 
-## 🔄 Drivetrain – Kraken Swerve
+## 🔄 Drivetrain - Kraken Swerve
 
 Located in `subsystems/drive/`
 

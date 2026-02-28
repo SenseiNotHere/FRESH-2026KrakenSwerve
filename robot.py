@@ -45,6 +45,8 @@ class MyRobot(TimedCommandRobot):
         if self.autonomousCommand:
             self.autonomousCommand.schedule()
 
+        self.robotContainer.climber.startHoming()
+
     def autonomousPeriodic(self) -> None:
         """This function is called periodically during autonomous"""
 
@@ -55,6 +57,8 @@ class MyRobot(TimedCommandRobot):
         # this line or comment it out.
         if self.autonomousCommand:
             self.autonomousCommand.cancel()
+
+        self.robotContainer.climber.startHoming()
 
     def teleopPeriodic(self) -> None:
         """This function is called periodically during operator control"""
