@@ -120,11 +120,13 @@ Superstructure decides.
 
 ## 4️⃣ (Optional) Add Readiness Logic
 
-If your state affects robot readiness (like shooter ready, elevator at
-target, etc.), update `_update_readiness()` accordingly.
-This is a good place to add safety checks.
-Also, make sure to add your robot readiness to the `RobotReadiness` Data Class.
-You can find it in `superstructure/robot_state.py`.
+If your new state affects robot readiness (for example shooter ready, elevator at target, etc.), update `_update_readiness()` accordingly.
+This is the correct place to add safety checks, gating logic, or state-based conditions.
+If you introduce a new readiness flag, make sure to also add it to the `RobotReadiness` data class located in:
+    superstructure/robot_state.py
+All readiness values should live inside `RobotReadiness`. Please don't scatter them all over the codebase.
+
+Keep readiness centralized.
 
 This keeps rumble logic, feed gating, and state transitions consistent.
 
