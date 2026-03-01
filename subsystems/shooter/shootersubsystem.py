@@ -59,30 +59,7 @@ class Shooter(Subsystem):
         self._targetRPS: float | None = None
 
         # Dashboard (Manual Testing Only)
-        self.speedChooser = SendableChooser()
-        self.speedChooser.setDefaultOption("100%", 1.0)
-        self.speedChooser.addOption("95%", 0.95)
-        self.speedChooser.addOption("90%", 0.9)
-        self.speedChooser.addOption("85%", 0.85)
-        self.speedChooser.addOption("80%", 0.8)
-        self.speedChooser.addOption("75%", 0.75)
-        self.speedChooser.addOption("70%", 0.7)
-        self.speedChooser.addOption("60%", 0.6)
-        self.speedChooser.addOption("55%", 0.55)
-        self.speedChooser.addOption("50%", 0.5)
-        self.speedChooser.addOption("45%", 0.45)
-        self.speedChooser.addOption("40%", 0.4)
-        self.speedChooser.addOption("35%", 0.35)
-        self.speedChooser.addOption("30%", 0.3)
-        self.speedChooser.addOption("25%", 0.25)
-        self.speedChooser.addOption("20%", 0.2)
-        self.speedChooser.addOption("15%", 0.15)
-        self.speedChooser.addOption("10%", 0.1)
-        self.speedChooser.addOption("5%", 0.05)
-        self.speedChooser.addOption("0%", 0.0)
-
-        SmartDashboard.putData("Shooter Speed", self.speedChooser)
-
+        SmartDashboard.putNumber("Shooter Percent Input", 25)
         self.kMaxRPM = ShooterConstants.kMaxRPM
 
     # Periodic
@@ -119,7 +96,8 @@ class Shooter(Subsystem):
         self._targetRPS = target_rpm / 60.0
 
     def useDashboardPercent(self):
-        percent = self.speedChooser.getSelected()
+        percentInput = SmartDashboard.getNumber("Shooter Percent Input", 25)
+        percent = percentInput / 100
         self.setPercent(percent)
 
     def stop(self):

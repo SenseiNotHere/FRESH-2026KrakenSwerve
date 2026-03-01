@@ -72,7 +72,6 @@ class RobotContainer:
         SmartDashboard.putData("Test Chooser", self.testChooser)
 
         # Controllers
-
         self.driverController = CommandGenericHID(
             OIConstants.kDriverControllerPort
         )
@@ -81,7 +80,6 @@ class RobotContainer:
         )
 
         # Vision / Localization
-
         self.localizer = LimelightLocalizer(
             drivetrain=self.robotDrive,
             flipIfRed=True,
@@ -190,7 +188,6 @@ class RobotContainer:
         )
  
         # Superstructure (MUST BE LAST)
-
         self.superstructure = Superstructure(
             drivetrain=self.robotDrive,
             shooter=self.shooter,
